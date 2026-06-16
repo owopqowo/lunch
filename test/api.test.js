@@ -32,3 +32,18 @@ test('POST /api/menus는 name이 없으면 400을 반환한다', async () => {
   const res = await request(app).post('/api/menus').send({ description: '설명만' });
   assert.equal(res.status, 400);
 });
+
+test('POST /api/menus/:id/vote는 votes를 1 증가시킨다', async () => {
+  const app = await freshApp();
+  const created = await request(app).post('/api/menus').send({ name: '파스타' });
+  const id = created.body.id;
+  const res = await request(app).post(`/api/menus/${id}/vote`);
+  assert.equal(res.status, 200);
+  assert.equal(res.body.votes, 1);
+});
+
+test('POST /api/menus/:id/vote는 없는 id면 404를 반환한다', async () => {
+  const app = await freshApp();
+  const res = await request(app).post('/api/menus/9999/vote');
+  assert.equal(res.status, 404);
+});

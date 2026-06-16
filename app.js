@@ -36,5 +36,20 @@ export function createApp(client) {
     }
   });
 
+  app.post('/api/menus/:id/vote', async (req, res) => {
+    try {
+      const result = await client.execute({
+        sql: 'UPDATE menus SET votes = votes + 1 WHERE id = ? RETURNING *',
+        args: [req.params.id],
+      });
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'not found' });
+      }
+      res.json(result.rows[0]);
+    } catch (e) {
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
   return app;
 }
