@@ -238,6 +238,7 @@ randomBtn.addEventListener('click', async () => {
   if (randomBtn.disabled) return;
   randomBtn.disabled = true;
   randomResult.classList.remove('winner');
+  randomResult.textContent = ''; // 이전 추첨 결과 즉시 제거
 
   const [winnerRes, listRes] = await Promise.all([
     fetch('/api/menus/random'),
