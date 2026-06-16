@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>오늘 뭐 먹지? 🍱</title>
+  <title>오늘 뭐 먹지?</title>
   <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
   <link rel="stylesheet" href="/style.css" />
   <script>
@@ -19,10 +19,13 @@
 <body>
   <button id="theme-toggle" type="button"></button>
   <main>
-    <h1>오늘 뭐 먹지? 🍱</h1>
+    <h1>오늘 뭐 먹지?</h1>
 
     <section class="recommend">
-      <button id="random-btn">🎲 랜덤 추천</button>
+      <button id="random-btn">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l6.1-8.6c.7-1.1 2-1.7 3.3-1.7H22"/><path d="m18 2 4 4-4 4"/><path d="M2 6h1.9c1.5 0 2.9.9 3.6 2.2"/><path d="M22 18h-5.9c-1.3 0-2.6-.7-3.3-1.8l-.5-.8"/><path d="m18 14 4 4-4 4"/></svg>
+        <span>랜덤 추천</span>
+      </button>
       <p id="random-result" aria-live="polite"></p>
     </section>
 
