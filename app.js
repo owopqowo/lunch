@@ -20,6 +20,20 @@ export function createApp(client) {
     }
   });
 
+  app.get('/api/menus/random', async (req, res) => {
+    try {
+      const result = await client.execute(
+        'SELECT * FROM menus ORDER BY RANDOM() LIMIT 1'
+      );
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'no menus' });
+      }
+      res.json(result.rows[0]);
+    } catch (e) {
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
   app.post('/api/menus', async (req, res) => {
     const { name, description } = req.body ?? {};
     if (!name || !name.trim()) {
