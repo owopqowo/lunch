@@ -61,3 +61,19 @@ test('GET /api/menus/random은 메뉴가 없으면 404를 반환한다', async (
   const res = await request(app).get('/api/menus/random');
   assert.equal(res.status, 404);
 });
+
+test('PATCH /api/menus/:id는 이름을 수정한다', async () => {
+  const app = await freshApp();
+  const created = await request(app).post('/api/menus').send({ name: '라면' });
+  const res = await request(app)
+    .patch(`/api/menus/${created.body.id}`)
+    .send({ name: '진라면' });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.name, '진라면');
+});
+
+test('PATCH /api/menus/:id는 없는 id면 404를 반환한다', async () => {
+  const app = await freshApp();
+  const res = await request(app).patch('/api/menus/9999').send({ name: 'x' });
+  assert.equal(res.status, 404);
+});

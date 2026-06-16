@@ -65,5 +65,27 @@ export function createApp(client) {
     }
   });
 
+  app.patch('/api/menus/:id', async (req, res) => {
+    const { name, description } = req.body ?? {};
+    if (name !== undefined && !name.trim()) {
+      return res.status(400).json({ error: 'name cannot be empty' });
+    }
+    try {
+      const result = await client.execute({
+        sql: `UPDATE menus
+                SET name = COALESCE(?, name),
+                    description = COALESCE(?, description)
+              WHERE id = ? RETURNING *`,
+        args: [name ?? null, description ?? null, req.params.id],
+      });
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'not found' });
+      }
+      res.json(result.rows[0]);
+    } catch (e) {
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
   return app;
 }
