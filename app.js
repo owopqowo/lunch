@@ -87,5 +87,20 @@ export function createApp(client) {
     }
   });
 
+  app.delete('/api/menus/:id', async (req, res) => {
+    try {
+      const result = await client.execute({
+        sql: 'DELETE FROM menus WHERE id = ?',
+        args: [req.params.id],
+      });
+      if (result.rowsAffected === 0) {
+        return res.status(404).json({ error: 'not found' });
+      }
+      res.status(204).end();
+    } catch (e) {
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
   return app;
 }
