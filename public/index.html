@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>오늘 뭐 먹지? 🍱</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <main>
+    <h1>오늘 뭐 먹지? 🍱</h1>
+
+    <section class="recommend">
+      <button id="random-btn">🎲 랜덤 추천</button>
+      <p id="random-result"></p>
+    </section>
+
+    <form id="add-form">
+      <input id="name" type="text" placeholder="메뉴 이름" required />
+      <input id="description" type="text" placeholder="한줄 설명 (선택)" />
+      <button type="submit">추가</button>
+    </form>
+
+    <ul id="menu-list"></ul>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>
