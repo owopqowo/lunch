@@ -20,5 +20,21 @@ export function createApp(client) {
     }
   });
 
+  app.post('/api/menus', async (req, res) => {
+    const { name, description } = req.body ?? {};
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'name is required' });
+    }
+    try {
+      const result = await client.execute({
+        sql: 'INSERT INTO menus (name, description) VALUES (?, ?) RETURNING *',
+        args: [name.trim(), description ?? null],
+      });
+      res.status(201).json(result.rows[0]);
+    } catch (e) {
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
   return app;
 }
