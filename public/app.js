@@ -6,8 +6,21 @@ const randomBtn = document.getElementById('random-btn');
 const randomResult = document.getElementById('random-result');
 const recommendSection = document.querySelector('.recommend');
 const toastContainer = document.getElementById('toast-container');
+const themeToggle = document.getElementById('theme-toggle');
 
 let maxVotes = 0;
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+  themeToggle.setAttribute('aria-label', theme === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환');
+}
+applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
+themeToggle.addEventListener('click', () => {
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('theme', next);
+  applyTheme(next);
+});
 
 function showToast(message, type = 'info') {
   const t = document.createElement('div');
@@ -246,15 +259,19 @@ randomBtn.addEventListener('click', async () => {
   const menus = await listRes.json();
   const names = menus.map((m) => m.name);
 
-  // 슬롯머신 연출: 빠르게 돌다가 점점 느려진 뒤 당첨 식당에서 멈춤
-  randomResult.classList.add('rolling');
-  let delay = 60;
-  for (let i = 0; i < 18; i++) {
-    randomResult.textContent = `🎰 ${names[Math.floor(Math.random() * names.length)]}`;
-    await sleep(delay);
-    delay += 18; // 점점 느려지게
+  // 모션 최소화 선호 시 슬롯머신 연출 생략, 바로 결과 표시
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!reduceMotion) {
+    // 슬롯머신 연출: 빠르게 돌다가 점점 느려진 뒤 당첨 식당에서 멈춤
+    randomResult.classList.add('rolling');
+    let delay = 60;
+    for (let i = 0; i < 18; i++) {
+      randomResult.textContent = `🎰 ${names[Math.floor(Math.random() * names.length)]}`;
+      await sleep(delay);
+      delay += 18; // 점점 느려지게
+    }
+    randomResult.classList.remove('rolling');
   }
-  randomResult.classList.remove('rolling');
 
   randomResult.textContent = `오늘은 → ${winner.name} 🍽️`;
   randomResult.classList.add('winner');

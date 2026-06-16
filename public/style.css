@@ -2,7 +2,9 @@
   --brand: #f59e0b;
   --brand-hover: #d97706;
   --brand-soft: #fef3c7;
+  --brand-bg: #fffdf6;
   --vote: #16a34a;
+  --vote-strong: #15803d;
   --vote-soft: #dcfce7;
   --ink: #1f2937;
   --ink-hover: #374151;
@@ -14,12 +16,48 @@
   --danger: #dc2626;
   --danger-soft: #fef2f2;
   --danger-line: #fecaca;
-  --radius: 8px;
+  --bg: #f6f7f9;
+  --card: #fff;
+  --vote-soft-hover: #bbf7d0;
+  --solid: #1f2937;
+  --solid-hover: #374151;
+  --on-solid: #fff;
+  --toast-bg: #1f2937;
+  --toast-fg: #fff;
+}
+
+:root[data-theme="dark"] {
+  --brand-hover: #fbbf24;
+  --brand-bg: #2a2310;
+  --vote: #22c55e;
+  --vote-strong: #4ade80;
+  --vote-soft: #14331f;
+  --vote-soft-hover: #1b4429;
+  --ink: #e5e7eb;
+  --ink-hover: #f3f4f6;
+  --muted: #9ca3af;
+  --surface: #374151;
+  --surface-hover: #4b5563;
+  --line: #374151;
+  --line-strong: #4b5563;
+  --danger: #ef4444;
+  --danger-soft: #3a1d1d;
+  --danger-line: #7f1d1d;
+  --bg: #111418;
+  --card: #1b1f24;
+  --solid: #e5e7eb;
+  --solid-hover: #f3f4f6;
+  --on-solid: #1f2937;
+  --toast-bg: #e5e7eb;
+  --toast-fg: #1f2937;
+}
+:root[data-theme="dark"] .sk::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
 }
 * { box-sizing: border-box; }
 body {
   font-family: "Pretendard Variable", Pretendard, system-ui, -apple-system, "Segoe UI", sans-serif;
-  background: #f6f7f9;
+  background: var(--bg);
   margin: 0;
   color: var(--ink);
 }
@@ -29,6 +67,16 @@ button:focus-visible, input:focus-visible {
   outline-offset: 2px;
 }
 main { max-width: 560px; margin: 0 auto; padding: 24px 16px; }
+#theme-toggle {
+  position: fixed; top: 12px; right: 12px; z-index: 50;
+  width: 40px; height: 40px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--card); color: var(--ink);
+  font-size: 1.1rem; line-height: 1; cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+#theme-toggle:hover { background: var(--surface); }
+#theme-toggle:active { transform: scale(0.94); }
 h1 { text-align: center; }
 .recommend { text-align: center; margin: 16px 0 24px; }
 #random-btn {
@@ -46,7 +94,7 @@ h1 { text-align: center; }
 #random-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 #random-result.rolling { color: #9ca3af; }
 #random-result.winner {
-  color: #f59e0b; font-size: 1.6rem;
+  color: var(--brand); font-size: 1.6rem;
   animation: pop 0.45s cubic-bezier(0.18, 0.89, 0.32, 1.28);
 }
 @keyframes pop {
@@ -57,27 +105,28 @@ h1 { text-align: center; }
 #add-form { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
 #add-form input {
   flex: 1; padding: 8px; border: 1px solid var(--line-strong); border-radius: 6px;
+  background: var(--card); color: var(--ink);
   transition: border-color 0.15s;
 }
 #add-form input:focus { border-color: var(--brand); outline: none; }
 #add-form button {
   padding: 8px 16px; border: none; border-radius: 6px; font-weight: 600;
-  background: var(--ink); color: #fff; cursor: pointer;
+  background: var(--solid); color: var(--on-solid); cursor: pointer;
   transition: background 0.15s;
 }
-#add-form button:hover { background: var(--ink-hover); }
+#add-form button:hover { background: var(--solid-hover); }
 #menu-list { list-style: none; padding: 0; }
 .menu-item {
   position: relative;
   display: flex; align-items: center; gap: 8px;
-  background: #fff; padding: 12px; border-radius: 8px; margin-bottom: 8px;
+  background: var(--card); padding: 12px; border-radius: 8px; margin-bottom: 8px;
   border: 1px solid transparent;
   box-shadow: 0 1px 2px rgba(0,0,0,0.06);
   transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
 }
 .menu-item.leader {
   border-color: var(--brand);
-  background: #fffdf6;
+  background: var(--brand-bg);
   box-shadow: 0 2px 14px rgba(245, 158, 11, 0.2);
 }
 .crown {
@@ -92,15 +141,15 @@ h1 { text-align: center; }
   100% { transform: scale(1) rotate(-12deg); }
 }
 .actions { display: flex; align-items: center; gap: 8px; }
-.menu-item .info { flex: 1; }
-.menu-item .name { font-weight: 600; }
-.menu-item .desc { font-size: 0.85rem; color: #6b7280; }
+.menu-item .info { flex: 1; min-width: 0; }
+.menu-item .name { font-weight: 600; overflow-wrap: anywhere; }
+.menu-item .desc { font-size: 0.85rem; color: var(--muted); overflow-wrap: anywhere; }
 .menu-item button {
   border: 1px solid transparent; border-radius: 6px; padding: 6px 10px; cursor: pointer;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
-.vote-btn { background: var(--vote-soft); color: var(--vote); font-weight: 600; }
-.vote-btn:hover:not(:disabled) { background: #bbf7d0; }
+.vote-btn { background: var(--vote-soft); color: var(--vote-strong); font-weight: 600; }
+.vote-btn:hover:not(:disabled) { background: var(--vote-soft-hover); }
 .vote-count { font-variant-numeric: tabular-nums; }
 .menu-item button:disabled { opacity: 0.6; cursor: not-allowed; }
 .vote-btn.loading { position: relative; color: transparent; }
@@ -120,12 +169,13 @@ h1 { text-align: center; }
 .edit-fields { display: flex; flex-direction: column; gap: 6px; }
 .edit-fields input {
   padding: 6px 8px; border: 1px solid var(--line-strong); border-radius: 6px;
+  background: var(--card); color: var(--ink);
   font-family: inherit; font-size: 0.9rem; transition: border-color 0.15s;
 }
 .edit-fields input:focus { border-color: var(--brand); outline: none; }
 .edit-name { font-weight: 600; }
-.save-btn { background: var(--ink); color: #fff; font-weight: 600; }
-.save-btn:hover:not(:disabled) { background: var(--ink-hover); }
+.save-btn { background: var(--solid); color: var(--on-solid); font-weight: 600; }
+.save-btn:hover:not(:disabled) { background: var(--solid-hover); }
 .cancel-btn { background: var(--surface); color: var(--muted); }
 .cancel-btn:hover { background: var(--surface-hover); color: var(--ink); }
 
@@ -143,21 +193,21 @@ h1 { text-align: center; }
 .toast {
   pointer-events: auto; max-width: 90vw;
   padding: 10px 18px; border-radius: 999px;
-  font-size: 0.9rem; font-weight: 500; color: #fff;
-  background: var(--ink);
+  font-size: 0.9rem; font-weight: 500; color: var(--toast-fg);
+  background: var(--toast-bg);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
   opacity: 0; transform: translateY(10px);
   transition: opacity 0.2s, transform 0.2s;
 }
 .toast.show { opacity: 1; transform: translateY(0); }
-.toast-success { background: var(--vote); }
-.toast-error { background: var(--danger); }
+.toast-success { background: var(--vote); color: #fff; }
+.toast-error { background: var(--danger); color: #fff; }
 
 /* 빈 상태 */
 .empty-state {
   text-align: center;
   padding: 40px 24px;
-  background: #fff;
+  background: var(--card);
   border: 1px dashed var(--line-strong);
   border-radius: 12px;
   animation: empty-in 0.3s ease-out both;
@@ -180,11 +230,11 @@ h1 { text-align: center; }
 .empty-cta {
   border: none; border-radius: 999px; padding: 10px 22px; cursor: pointer;
   font-weight: 600; font-size: 0.95rem;
-  background: var(--brand); color: #fff;
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+  background: var(--solid); color: var(--on-solid);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
 }
-.empty-cta:hover { background: var(--brand-hover); box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4); }
+.empty-cta:hover { background: var(--solid-hover); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16); }
 .empty-cta:active { transform: translateY(1px); }
 
 /* 스켈레톤 로딩 (최초 목록 로드 시) */
@@ -220,12 +270,20 @@ h1 { text-align: center; }
 
   /* 카드: 액션 버튼 묶음을 둘째 줄로 내려 균등 분할 */
   .menu-item { flex-wrap: wrap; row-gap: 10px; }
-  .menu-item .info { min-width: 0; }
-  .menu-item .name, .menu-item .desc { overflow-wrap: anywhere; }
   .actions { flex: 1 1 100%; }
   .actions button { flex: 1; padding: 10px; }
   .actions .sk-btn { flex: 1; width: auto; height: 38px; }
 
   /* 입력 확대 방지 */
   .edit-fields input { font-size: 16px; }
+}
+
+/* 모션 최소화 선호 시: 장식성 애니메이션 끄기 (로딩 스피너는 유지) */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .vote-btn.loading::after { animation: spin 0.6s linear infinite !important; }
 }

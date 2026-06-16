@@ -6,14 +6,24 @@
   <title>오늘 뭐 먹지? 🍱</title>
   <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
   <link rel="stylesheet" href="/style.css" />
+  <script>
+    (function () {
+      var t = localStorage.getItem('theme');
+      if (t !== 'light' && t !== 'dark') {
+        t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
 </head>
 <body>
+  <button id="theme-toggle" type="button"></button>
   <main>
     <h1>오늘 뭐 먹지? 🍱</h1>
 
     <section class="recommend">
       <button id="random-btn">🎲 랜덤 추천</button>
-      <p id="random-result"></p>
+      <p id="random-result" aria-live="polite"></p>
     </section>
 
     <form id="add-form">
