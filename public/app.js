@@ -58,7 +58,7 @@ async function vote(id) {
 }
 
 async function editMenu(m) {
-  const name = prompt('메뉴 이름', m.name);
+  const name = prompt('식당 이름', m.name);
   if (name === null) return;
   const res = await fetch(`/api/menus/${m.id}`, {
     method: 'PATCH',
@@ -78,7 +78,7 @@ async function removeMenu(id) {
 
 randomBtn.addEventListener('click', async () => {
   const res = await fetch('/api/menus/random');
-  if (res.status === 404) { randomResult.textContent = '메뉴를 먼저 추가하세요!'; return; }
+  if (res.status === 404) { randomResult.textContent = '식당을 먼저 추가하세요!'; return; }
   if (!res.ok) { randomResult.textContent = '오류가 발생했습니다.'; return; }
   const m = await res.json();
   randomResult.textContent = `오늘은 → ${m.name} 🍽️`;
