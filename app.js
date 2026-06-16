@@ -42,7 +42,7 @@ export function createApp(client) {
     try {
       const result = await client.execute({
         sql: 'INSERT INTO menus (name, description) VALUES (?, ?) RETURNING *',
-        args: [name.trim(), description ?? null],
+        args: [name.trim(), (typeof description === 'string' && description.trim()) ? description.trim() : null],
       });
       res.status(201).json(result.rows[0]);
     } catch (e) {
@@ -67,7 +67,7 @@ export function createApp(client) {
 
   app.patch('/api/menus/:id', async (req, res) => {
     const { name, description } = req.body ?? {};
-    if (name !== undefined && !name.trim()) {
+    if (typeof name === 'string' && !name.trim()) {
       return res.status(400).json({ error: 'name cannot be empty' });
     }
     try {
@@ -76,7 +76,7 @@ export function createApp(client) {
                 SET name = COALESCE(?, name),
                     description = COALESCE(?, description)
               WHERE id = ? RETURNING *`,
-        args: [name ?? null, description ?? null, req.params.id],
+        args: [typeof name === 'string' ? name.trim() : null, description ?? null, req.params.id],
       });
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'not found' });

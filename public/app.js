@@ -7,6 +7,7 @@ const randomResult = document.getElementById('random-result');
 
 async function loadMenus() {
   const res = await fetch('/api/menus');
+  if (!res.ok) { list.innerHTML = '<li class="menu-item">목록을 불러오지 못했습니다.</li>'; return; }
   const menus = await res.json();
   render(menus);
 }
@@ -17,7 +18,7 @@ function render(menus) {
     const li = document.createElement('li');
     li.className = 'menu-item';
     li.innerHTML = `
-      <span class="votes">${m.votes}</span>
+      <span class="votes"></span>
       <div class="info">
         <div class="name"></div>
         <div class="desc"></div>
@@ -26,6 +27,7 @@ function render(menus) {
       <button class="edit-btn">수정</button>
       <button class="del-btn">삭제</button>
     `;
+    li.querySelector('.votes').textContent = m.votes;
     li.querySelector('.name').textContent = m.name;
     li.querySelector('.desc').textContent = m.description || '';
     li.querySelector('.vote-btn').onclick = () => vote(m.id);
@@ -77,6 +79,7 @@ async function removeMenu(id) {
 randomBtn.addEventListener('click', async () => {
   const res = await fetch('/api/menus/random');
   if (res.status === 404) { randomResult.textContent = '메뉴를 먼저 추가하세요!'; return; }
+  if (!res.ok) { randomResult.textContent = '오류가 발생했습니다.'; return; }
   const m = await res.json();
   randomResult.textContent = `오늘은 → ${m.name} 🍽️`;
 });

@@ -6,7 +6,12 @@ const client = makeClient({
   authToken: process.env.TURSO_TOKEN,
 });
 
-await initSchema(client);
+try {
+  await initSchema(client);
+} catch (e) {
+  console.error('DB init failed:', e.message);
+  process.exit(1);
+}
 
 const app = createApp(client);
 const port = process.env.PORT || 3000;
