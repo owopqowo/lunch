@@ -41,10 +41,21 @@ export function loadKakao() {
     }
     const script = document.createElement('script');
     script.src =
-      `//dapi.kakao.com/v2/maps/sdk.js?appkey=${cachedKey}` +
+      `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${cachedKey}` +
       `&libraries=services&autoload=false`;
     script.onload = () => window.kakao.maps.load(() => resolve(true));
-    script.onerror = () => resolve(false);
+    script.onerror = (e) => {
+      // 진단용: SDK 로드 실패 원인 노출. 카카오가 에러 JSON을 주면 브라우저 ORB가
+      // 차단해(ERR_BLOCKED_BY_ORB) Network 응답 본문이 안 보이므로 여기서 안내한다.
+      console.error(
+        '[map] 카카오 SDK 로드 실패. 카카오 개발자 콘솔에서 (1) 제품 설정 → 카카오맵 ' +
+          '서비스가 활성화됐는지, (2) 플랫폼 Web 도메인에 현재 출처' +
+          `(${window.location.origin})가 등록됐는지, (3) JavaScript 키가 맞는지 확인하세요. ` +
+          '원인은 sdk.js URL을 새 탭 주소창에 직접 열면 카카오 에러 메시지로 확인할 수 있습니다.',
+        e,
+      );
+      resolve(false);
+    };
     document.head.appendChild(script);
   });
   return sdkPromise;
