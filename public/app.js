@@ -37,6 +37,9 @@ const ICONS = {
         '<path d="M3 2v7c0 1.1.9 2 2 2a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>',
         30,
     ),
+    pin: icon('<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>', 16),
+    close: icon('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>', 18),
+    external: icon('<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h6"/>', 14),
 };
 
 function applyTheme(theme) {
@@ -280,7 +283,76 @@ async function removeMenu(li, m, btn) {
     }
 }
 
-// 식당 이름으로 '위치 보기' 버튼 + 토글되는 인라인 지도 박스를 만든다.
+// 모든 위치 컨트롤이 공유하는 단일 모달. 최초 사용 시 한 번만 생성한다.
+let mapModalEls = null;
+let mapModalOpener = null;
+
+function ensureMapModal() {
+    if (mapModalEls) return mapModalEls;
+    const overlay = document.createElement('div');
+    overlay.className = 'map-modal';
+    overlay.hidden = true;
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.innerHTML = `
+    <div class="map-dialog">
+      <div class="map-dialog-header">
+        <span class="map-dialog-title"></span>
+        <button type="button" class="map-close" aria-label="닫기">${ICONS.close}</button>
+      </div>
+      <div class="map-dialog-body"></div>
+    </div>
+  `;
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) closeMapModal(); // 배경 클릭으로 닫기
+    });
+    overlay.querySelector('.map-close').addEventListener('click', closeMapModal);
+    document.body.appendChild(overlay);
+    mapModalEls = {
+        overlay,
+        title: overlay.querySelector('.map-dialog-title'),
+        body: overlay.querySelector('.map-dialog-body'),
+        closeBtn: overlay.querySelector('.map-close'),
+    };
+    return mapModalEls;
+}
+
+function onMapModalKeydown(e) {
+    if (e.key === 'Escape') closeMapModal();
+}
+
+// 모달을 열고 콘텐츠를 채울 본문 요소를 반환한다.
+function openMapModal(name, opener) {
+    const els = ensureMapModal();
+    mapModalOpener = opener || document.activeElement;
+    els.title.textContent = name;
+    els.body.innerHTML = '';
+    els.overlay.setAttribute('aria-label', `${name} 위치`);
+    els.overlay.hidden = false;
+    requestAnimationFrame(() => els.overlay.classList.add('show'));
+    document.addEventListener('keydown', onMapModalKeydown);
+    els.closeBtn.focus();
+    return els.body;
+}
+
+function closeMapModal() {
+    if (!mapModalEls || mapModalEls.overlay.hidden) return;
+    const { overlay, body } = mapModalEls;
+    overlay.classList.remove('show');
+    document.removeEventListener('keydown', onMapModalKeydown);
+    const finish = () => {
+        overlay.hidden = true;
+        body.innerHTML = ''; // 지도 인스턴스 정리
+        overlay.removeEventListener('transitionend', finish);
+    };
+    overlay.addEventListener('transitionend', finish);
+    if (mapModalOpener && typeof mapModalOpener.focus === 'function') {
+        mapModalOpener.focus(); // 포커스 복귀(접근성)
+    }
+    mapModalOpener = null;
+}
+
+// 식당 이름으로 '위치 보기' 버튼을 만든다. 클릭 시 지도를 모달로 띄운다.
 // 키가 없으면 null을 반환(버튼 미생성).
 function createLocationControl(name) {
     if (!isLocationEnabled()) return null;
@@ -290,19 +362,9 @@ function createLocationControl(name) {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'loc-btn';
-    btn.textContent = '위치 보기';
+    btn.innerHTML = `${ICONS.pin}<span>위치 보기</span>`;
 
-    const box = document.createElement('div');
-    box.className = 'map-box';
-    box.hidden = true;
-
-    let loaded = false;
     btn.addEventListener('click', async () => {
-        // 이미 그려졌으면 토글만
-        if (loaded) {
-            box.hidden = !box.hidden;
-            return;
-        }
         btn.disabled = true;
         const ok = await loadKakao();
         if (!ok) {
@@ -311,29 +373,27 @@ function createLocationControl(name) {
             return;
         }
         const place = await findPlace(name);
+        const body = openMapModal(name, btn);
         if (!place) {
-            showToast('위치를 찾지 못했어요', 'error');
+            const msg = document.createElement('p');
+            msg.className = 'map-empty';
+            msg.textContent = '위치를 찾지 못했어요.';
             const a = document.createElement('a');
             a.href = kakaoSearchUrl(name);
             a.target = '_blank';
             a.rel = 'noopener';
             a.className = 'map-link';
-            a.textContent = '카카오맵에서 검색';
-            box.innerHTML = '';
-            box.appendChild(a);
-            box.hidden = false;
-            loaded = true;
-            btn.disabled = false;
-            return;
+            a.setAttribute('aria-label', '카카오맵에서 검색 (새 탭)');
+            a.innerHTML = `<span>카카오맵에서 검색</span>${ICONS.external}`;
+            body.appendChild(msg);
+            body.appendChild(a);
+        } else {
+            showMap(body, place);
         }
-        showMap(box, place);
-        box.hidden = false;
-        loaded = true;
         btn.disabled = false;
     });
 
     wrap.appendChild(btn);
-    wrap.appendChild(box);
     return wrap;
 }
 

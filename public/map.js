@@ -3,6 +3,13 @@
 
 const ASSEMBLY = { lat: 37.5318, lng: 126.9143 }; // 국회의사당
 
+// 새 탭으로 열림을 나타내는 외부 링크 아이콘 (Lucide external-link)
+const EXTERNAL_LINK_ICON =
+  '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" ' +
+  'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+  '<path d="M15 3h6v6"/><path d="M10 14 21 3"/>' +
+  '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h6"/></svg>';
+
 let cachedKey = null;        // string | null (null = 미설정)
 let configLoaded = false;
 let sdkPromise = null;       // Promise<boolean> 캐시
@@ -101,7 +108,8 @@ export function showMap(container, place) {
   link.href = place.place_url || kakaoSearchUrl(place.place_name || '');
   link.target = '_blank';
   link.rel = 'noopener';
-  link.textContent = '카카오맵에서 열기';
+  link.setAttribute('aria-label', '카카오맵에서 열기 (새 탭)');
+  link.innerHTML = `<span>카카오맵에서 열기</span>${EXTERNAL_LINK_ICON}`;
   container.appendChild(link);
 
   // 컨테이너가 늦게 보이면 지도 타일이 깨지므로 한 번 리레이아웃

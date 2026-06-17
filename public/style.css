@@ -122,7 +122,7 @@ h1 { text-align: center; }
 #menu-list { list-style: none; padding: 0; }
 .menu-item {
   position: relative;
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; row-gap: 10px;
   background: var(--card); padding: 12px; border-radius: 8px; margin-bottom: 8px;
   border: 1px solid transparent;
   box-shadow: 0 1px 2px rgba(0,0,0,0.06);
@@ -298,26 +298,73 @@ h1 { text-align: center; }
   .vote-btn.loading::after { animation: spin 0.6s linear infinite !important; }
 }
 
-/* 위치 보기 버튼 / 지도 */
+/* 위치 보기 버튼 */
+.loc-wrap { margin-top: 14px; }
+.recommend .loc-wrap { display: flex; justify-content: center; }
 .loc-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: 999px;
+  border: 1px solid var(--line-strong); background: var(--card); color: var(--ink);
+  font-size: 0.9rem; font-weight: 600; cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
+}
+.loc-btn:hover:not(:disabled) { border-color: var(--brand); color: var(--brand); background: var(--brand-soft); }
+.loc-btn:active:not(:disabled) { transform: translateY(1px); }
+.loc-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* 목록 항목 안에서는 한 줄을 차지하며 다른 액션 버튼과 톤을 맞춘다 */
+.menu-item .loc-wrap { flex: 1 1 100%; margin-top: 0; }
+.menu-item .loc-btn {
+  width: 100%; justify-content: center;
+  border-radius: 6px; padding: 8px 10px;
+  background: var(--surface); border-color: transparent; color: var(--muted);
+}
+.menu-item .loc-btn:hover:not(:disabled) {
+  background: var(--surface-hover); border-color: transparent; color: var(--ink);
 }
 
-.map-box {
-  margin-top: 12px;
+/* 지도 모달 */
+.map-modal {
+  position: fixed; inset: 0; z-index: 200;
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+  background: rgba(0, 0, 0, 0.6);
+  opacity: 0; transition: opacity 0.2s;
 }
-
-.map-canvas {
-  width: 100%;
-  height: 220px;
-  border-radius: 10px;
-  overflow: hidden;
+/* 작성자 CSS의 display:flex가 [hidden]의 display:none을 덮어쓰므로 명시적으로 숨긴다 */
+.map-modal[hidden] { display: none; }
+/* 닫히는(페이드 아웃) 동안에는 보이지 않으니 클릭을 가로채지 않는다 */
+.map-modal:not(.show) { pointer-events: none; }
+.map-modal.show { opacity: 1; }
+.map-dialog {
+  display: flex; flex-direction: column;
+  width: 100%; max-width: 480px; max-height: 90vh;
+  background: var(--card); color: var(--ink);
+  border-radius: 14px; overflow: hidden;
+  border: 1px solid var(--line);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.32);
+  transform: translateY(10px) scale(0.98); transition: transform 0.2s;
 }
-
+.map-modal.show .map-dialog { transform: none; }
+.map-dialog-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 14px 16px; border-bottom: 1px solid var(--line);
+}
+.map-dialog-title { font-weight: 700; font-size: 1.05rem; overflow-wrap: anywhere; }
+.map-close {
+  flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: 999px; border: none;
+  background: var(--surface); color: var(--muted); cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.map-close:hover { background: var(--surface-hover); color: var(--ink); }
+.map-dialog-body { padding: 16px; overflow: auto; }
+.map-canvas { width: 100%; height: 300px; border-radius: 10px; overflow: hidden; }
+/* 카카오맵은 다크 지도 스타일을 지원하지 않으므로 색 반전 필터로 근사한다.
+   invert + hue-rotate(180deg)는 명도만 뒤집어 마커 색조는 대체로 유지한다. */
+:root[data-theme="dark"] .map-canvas { filter: invert(1) hue-rotate(180deg) brightness(0.95); }
 .map-link {
-  display: inline-block;
-  margin-top: 8px;
-  font-size: 0.875rem;
+  display: inline-flex; align-items: center; gap: 4px;
+  margin-top: 12px; font-size: 0.9rem; font-weight: 600; color: var(--brand);
 }
+.map-link svg { flex-shrink: 0; }
+.map-empty { margin: 0 0 8px; color: var(--muted); }
