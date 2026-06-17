@@ -71,6 +71,10 @@ function renderSkeleton(count = 6) {
     for (let i = 0; i < count; i++) {
         const li = document.createElement('li');
         li.className = 'menu-item skeleton';
+        // 위치 보기 버튼은 카카오 키가 있을 때만 렌더되므로 스켈레톤도 동일 조건으로 자리를 잡는다.
+        const locSk = isLocationEnabled()
+            ? '\n      <div class="loc-wrap"><span class="sk sk-loc"></span></div>'
+            : '';
         li.innerHTML = `
       <div class="info">
         <div class="sk sk-line sk-name"></div>
@@ -80,7 +84,7 @@ function renderSkeleton(count = 6) {
         <span class="sk sk-btn"></span>
         <span class="sk sk-btn"></span>
         <span class="sk sk-btn"></span>
-      </div>
+      </div>${locSk}
     `;
         list.appendChild(li);
     }

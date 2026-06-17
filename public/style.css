@@ -264,6 +264,7 @@ h1 { text-align: center; }
 .sk-name { width: 40%; }
 .sk-desc { width: 75%; }
 .sk-btn { height: 32px; }
+.sk-loc { display: block; width: 100%; height: 36px; }
 .actions .sk-btn:nth-child(1) { width: 46px; }   /* 투표 */
 .actions .sk-btn:nth-child(2),
 .actions .sk-btn:nth-child(3) { width: 50px; }   /* 수정 / 삭제 */
