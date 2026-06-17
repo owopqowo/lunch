@@ -403,6 +403,50 @@ function createLocationControl(name) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// 당첨 순간 별이 사방으로 "팡" 터지는 연출
+function burstStars(originEl) {
+    const host = originEl.parentElement; // .recommend (position: relative)
+    if (!host) return;
+    const hostRect = host.getBoundingClientRect();
+    const elRect = originEl.getBoundingClientRect();
+    // 결과 텍스트 중심을 호스트 기준 좌표로 환산
+    const cx = elRect.left - hostRect.left + elRect.width / 2;
+    const cy = elRect.top - hostRect.top + elRect.height / 2;
+
+    const glyphs = ['★', '✦', '✧', '⭐', '✨'];
+    const colors = ['#f59e0b', '#fbbf24', '#fcd34d', '#fb7185', '#34d399', '#60a5fa'];
+    const count = 18;
+
+    for (let i = 0; i < count; i++) {
+        const star = document.createElement('span');
+        star.className = 'burst-star';
+        star.textContent = glyphs[Math.floor(Math.random() * glyphs.length)];
+        star.style.color = colors[Math.floor(Math.random() * colors.length)];
+        star.style.fontSize = `${10 + Math.random() * 16}px`;
+        star.style.left = `${cx}px`;
+        star.style.top = `${cy}px`;
+        host.appendChild(star);
+
+        // 균등 분포 + 약간의 흔들림으로 자연스러운 방사형
+        const angle = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+        const distance = 70 + Math.random() * 80;
+        const dx = Math.cos(angle) * distance;
+        const dy = Math.sin(angle) * distance - 10; // 살짝 위로 떠오르게
+        const rot = (Math.random() - 0.5) * 540;
+        const duration = 700 + Math.random() * 500;
+
+        const anim = star.animate(
+            [
+                { transform: 'translate(-50%, -50%) scale(0) rotate(0deg)', opacity: 1 },
+                { transform: `translate(-50%, -50%) translate(${dx * 0.6}px, ${dy * 0.6}px) scale(1.2) rotate(${rot * 0.6}deg)`, opacity: 1, offset: 0.55 },
+                { transform: `translate(-50%, -50%) translate(${dx}px, ${dy + 24}px) scale(0.3) rotate(${rot}deg)`, opacity: 0 },
+            ],
+            { duration, easing: 'cubic-bezier(0.18, 0.7, 0.3, 1)' }
+        );
+        anim.onfinish = () => star.remove();
+    }
+}
+
 randomBtn.addEventListener('click', async () => {
     if (randomBtn.disabled) return;
     randomBtn.disabled = true;
@@ -443,7 +487,17 @@ randomBtn.addEventListener('click', async () => {
     }
 
     randomResult.textContent = `오늘은 → ${winner.name}`;
+    // winner 애니메이션 재시작(연속 추첨 시에도 매번 재생되도록 reflow 트리거)
+    randomResult.classList.remove('winner');
+    void randomResult.offsetWidth;
     randomResult.classList.add('winner');
+
+    if (!reduceMotion) {
+        burstStars(randomResult);
+        randomBtn.classList.add('fired');
+        randomBtn.addEventListener('animationend', () => randomBtn.classList.remove('fired'), { once: true });
+    }
+
     const ctrl = createLocationControl(winner.name);
     if (ctrl) randomResult.insertAdjacentElement('afterend', ctrl);
     randomBtn.disabled = false;
