@@ -150,6 +150,8 @@ function renderView(li, m) {
     voteBtn.onclick = (e) => vote(m.id, e.currentTarget);
     li.querySelector('.edit-btn').onclick = () => renderEdit(li, m);
     li.querySelector('.del-btn').onclick = () => renderDeleteConfirm(li, m);
+    const ctrl = createLocationControl(m.name);
+    if (ctrl) li.appendChild(ctrl);
 }
 
 function renderEdit(li, m) {
