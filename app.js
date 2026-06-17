@@ -9,6 +9,10 @@ export function createApp(client) {
   app.use(express.json());
   app.use(express.static(path.join(__dirname, 'public')));
 
+  app.get('/api/config', (req, res) => {
+    res.json({ kakaoJsKey: process.env.KAKAO_JS_KEY || null });
+  });
+
   app.get('/api/menus', async (req, res) => {
     try {
       const result = await client.execute(

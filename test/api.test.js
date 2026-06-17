@@ -112,3 +112,30 @@ test('PATCH /api/menus/:id는 공백 이름이면 400을 반환한다', async ()
     .send({ name: '   ' });
   assert.equal(res.status, 400);
 });
+
+test('GET /api/config는 KAKAO_JS_KEY가 없으면 kakaoJsKey가 null이다', async () => {
+  const prev = process.env.KAKAO_JS_KEY;
+  delete process.env.KAKAO_JS_KEY;
+  try {
+    const app = await freshApp();
+    const res = await request(app).get('/api/config');
+    assert.equal(res.status, 200);
+    assert.deepEqual(res.body, { kakaoJsKey: null });
+  } finally {
+    if (prev !== undefined) process.env.KAKAO_JS_KEY = prev;
+  }
+});
+
+test('GET /api/config는 KAKAO_JS_KEY가 있으면 그 값을 반환한다', async () => {
+  const prev = process.env.KAKAO_JS_KEY;
+  process.env.KAKAO_JS_KEY = 'test-js-key';
+  try {
+    const app = await freshApp();
+    const res = await request(app).get('/api/config');
+    assert.equal(res.status, 200);
+    assert.deepEqual(res.body, { kakaoJsKey: 'test-js-key' });
+  } finally {
+    if (prev !== undefined) process.env.KAKAO_JS_KEY = prev;
+    else delete process.env.KAKAO_JS_KEY;
+  }
+});
