@@ -435,9 +435,10 @@ function burstStars(originEl) {
         const rot = (Math.random() - 0.5) * 540;
         const duration = 700 + Math.random() * 500;
 
+        // 모든 키프레임의 transform 함수 구조를 동일하게 유지해야 모바일에서도 위치가 보간됨
         const anim = star.animate(
             [
-                { transform: 'translate(-50%, -50%) scale(0) rotate(0deg)', opacity: 1 },
+                { transform: 'translate(-50%, -50%) translate(0px, 0px) scale(0) rotate(0deg)', opacity: 1 },
                 { transform: `translate(-50%, -50%) translate(${dx * 0.6}px, ${dy * 0.6}px) scale(1.2) rotate(${rot * 0.6}deg)`, opacity: 1, offset: 0.55 },
                 { transform: `translate(-50%, -50%) translate(${dx}px, ${dy + 24}px) scale(0.3) rotate(${rot}deg)`, opacity: 0 },
             ],
