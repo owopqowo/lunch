@@ -1,3 +1,12 @@
+import {
+  initConfig,
+  isLocationEnabled,
+  loadKakao,
+  findPlace,
+  showMap,
+  kakaoSearchUrl,
+} from './map.js';
+
 const list = document.getElementById('menu-list');
 const form = document.getElementById('add-form');
 const nameInput = document.getElementById('name');
@@ -269,6 +278,62 @@ async function removeMenu(li, m, btn) {
     }
 }
 
+// 식당 이름으로 '위치 보기' 버튼 + 토글되는 인라인 지도 박스를 만든다.
+// 키가 없으면 null을 반환(버튼 미생성).
+function createLocationControl(name) {
+  if (!isLocationEnabled()) return null;
+
+  const wrap = document.createElement('div');
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'loc-btn';
+  btn.textContent = '위치 보기';
+
+  const box = document.createElement('div');
+  box.className = 'map-box';
+  box.hidden = true;
+
+  let loaded = false;
+  btn.addEventListener('click', async () => {
+    // 이미 그려졌으면 토글만
+    if (loaded) {
+      box.hidden = !box.hidden;
+      return;
+    }
+    btn.disabled = true;
+    const ok = await loadKakao();
+    if (!ok) {
+      showToast('지도를 불러오지 못했어요', 'error');
+      btn.disabled = false;
+      return;
+    }
+    const place = await findPlace(name);
+    if (!place) {
+      showToast('위치를 찾지 못했어요', 'error');
+      const a = document.createElement('a');
+      a.href = kakaoSearchUrl(name);
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.className = 'map-link';
+      a.textContent = '카카오맵에서 검색';
+      box.innerHTML = '';
+      box.appendChild(a);
+      box.hidden = false;
+      loaded = true;
+      btn.disabled = false;
+      return;
+    }
+    showMap(box, place);
+    box.hidden = false;
+    loaded = true;
+    btn.disabled = false;
+  });
+
+  wrap.appendChild(btn);
+  wrap.appendChild(box);
+  return wrap;
+}
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 randomBtn.addEventListener('click', async () => {
@@ -276,6 +341,7 @@ randomBtn.addEventListener('click', async () => {
     randomBtn.disabled = true;
     randomResult.classList.remove('winner');
     randomResult.textContent = ''; // 이전 추첨 결과 즉시 제거
+    randomResult.nextElementSibling?.remove(); // 이전 위치 컨트롤 제거
 
     const [winnerRes, listRes] = await Promise.all([fetch('/api/menus/random'), fetch('/api/menus')]);
 
@@ -310,7 +376,9 @@ randomBtn.addEventListener('click', async () => {
 
     randomResult.textContent = `오늘은 → ${winner.name}`;
     randomResult.classList.add('winner');
+    const ctrl = createLocationControl(winner.name);
+    if (ctrl) randomResult.insertAdjacentElement('afterend', ctrl);
     randomBtn.disabled = false;
 });
 
-loadMenus({ skeleton: true });
+initConfig().then(() => loadMenus({ skeleton: true }));
