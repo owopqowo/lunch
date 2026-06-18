@@ -132,7 +132,7 @@ function render(menus) {
 // 현재 검색어를 적용해 목록 영역을 다시 그린다.
 function renderFiltered() {
     list.innerHTML = '';
-    updateRecommendScope();
+    updateRecommendState();
     if (allMenus.length === 0) {
         renderEmptyState();
         return;
@@ -186,20 +186,23 @@ function renderNoResults(query) {
     list.appendChild(li);
 }
 
-// 검색 중이면 "검색 결과 N곳에서 추천" 안내를 띄운다.
-function updateRecommendScope() {
+// 추천 영역 상태 갱신.
+// 추첨은 대상이 2곳 이상일 때만 의미가 있으므로, 미만이면 버튼을 비활성화하고 이유를 안내한다.
+function updateRecommendState() {
     const q = searchInput.value.trim();
-    if (!q || allMenus.length === 0) {
-        recommendScope.hidden = true;
-        return;
-    }
     const count = filterMenus(allMenus, searchInput.value).length;
-    if (count === 0) {
-        recommendScope.hidden = true;
-        return;
-    }
-    recommendScope.textContent = `검색 결과 ${count}곳에서 추천`;
-    recommendScope.hidden = false;
+
+    randomBtn.disabled = count < 2;
+
+    let hint = '';
+    if (count >= 2) {
+        hint = q ? `검색 결과 ${count}곳에서 추천` : ''; // 전체 추첨이면 안내 불필요
+    } else if (count === 1) {
+        hint = q ? '검색 결과가 1곳이에요' : '식당이 1곳뿐이에요';
+    } // count === 0 → 목록에 '검색 결과 없음'이 표시되므로 별도 안내 생략
+
+    recommendScope.textContent = hint;
+    recommendScope.hidden = hint === '';
 }
 
 function renderView(li, m) {
