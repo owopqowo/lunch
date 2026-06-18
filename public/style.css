@@ -143,6 +143,23 @@ h1 { text-align: center; }
   transition: background 0.15s;
 }
 #add-form button:hover { background: var(--solid-hover); }
+/* 검색 */
+#search-wrap { margin-bottom: 14px; }
+#search-wrap[hidden] { display: none; }
+#search {
+  width: 100%; padding: 10px 12px;
+  border: 1px solid var(--line-strong); border-radius: 8px;
+  background: var(--card); color: var(--ink);
+  font-family: inherit; font-size: 0.95rem;
+  transition: border-color 0.15s;
+}
+#search:focus { border-color: var(--brand); outline: none; }
+#search::placeholder { color: var(--muted); }
+
+/* 추천 범위 안내 (검색 결과 중에서 추천) */
+.recommend-scope { margin: 8px 0 0; font-size: 0.85rem; color: var(--muted); }
+.recommend-scope[hidden] { display: none; }
+
 #menu-list { list-style: none; padding: 0; }
 .menu-item {
   position: relative;
@@ -302,6 +319,7 @@ h1 { text-align: center; }
   #add-form { flex-direction: column; gap: 8px; }
   #add-form input { font-size: 16px; }
   #add-form button { width: 100%; padding: 12px; }
+  #search { font-size: 16px; } /* iOS 확대 방지 */
 
   /* 카드: 액션 버튼 묶음을 둘째 줄로 내려 균등 분할 */
   .menu-item { flex-wrap: wrap; row-gap: 10px; }

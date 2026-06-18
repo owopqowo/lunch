@@ -50,6 +50,7 @@
                     </svg>
                     <span>랜덤 추천</span>
                 </button>
+                <p id="recommend-scope" class="recommend-scope" hidden></p>
                 <p id="random-result" aria-live="polite"></p>
             </section>
 
@@ -58,6 +59,10 @@
                 <input id="description" type="text" placeholder="메뉴 (예: 갈비덮밥)" />
                 <button type="submit">추가</button>
             </form>
+
+            <div id="search-wrap" hidden>
+                <input id="search" type="search" placeholder="식당·메뉴 검색" autocomplete="off" aria-label="식당·메뉴 검색" />
+            </div>
 
             <ul id="menu-list"></ul>
         </main>

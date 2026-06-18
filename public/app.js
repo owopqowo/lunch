@@ -6,6 +6,7 @@ import {
   showMap,
   kakaoSearchUrl,
 } from './map.js';
+import { filterMenus } from './search.js';
 
 const list = document.getElementById('menu-list');
 const form = document.getElementById('add-form');
@@ -13,11 +14,15 @@ const nameInput = document.getElementById('name');
 const descInput = document.getElementById('description');
 const randomBtn = document.getElementById('random-btn');
 const randomResult = document.getElementById('random-result');
+const recommendScope = document.getElementById('recommend-scope');
 const recommendSection = document.querySelector('.recommend');
+const searchWrap = document.getElementById('search-wrap');
+const searchInput = document.getElementById('search');
 const toastContainer = document.getElementById('toast-container');
 const themeToggle = document.getElementById('theme-toggle');
 
 let maxVotes = 0;
+let allMenus = []; // 마지막으로 불러온 전체 목록 (검색 필터의 원본)
 
 // 미니멀 라인 아이콘 (Lucide 스타일, stroke = currentColor)
 function icon(paths, size = 20) {
@@ -38,6 +43,7 @@ const ICONS = {
         30,
     ),
     pin: icon('<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>', 16),
+    search: icon('<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>'),
     close: icon('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>', 18),
     external: icon('<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h6"/>', 14),
 };
@@ -53,6 +59,9 @@ themeToggle.addEventListener('click', () => {
     localStorage.setItem('theme', next);
     applyTheme(next);
 });
+
+// 타이핑할 때마다 실시간으로 목록을 필터링한다.
+searchInput.addEventListener('input', renderFiltered);
 
 function showToast(message, type = 'info') {
     const t = document.createElement('div');
@@ -111,27 +120,86 @@ async function loadMenus({ skeleton = false } = {}) {
 }
 
 function render(menus) {
-    list.innerHTML = '';
+    allMenus = menus;
+    // 추천/검색은 식당이 하나라도 있을 때만 의미가 있다.
     recommendSection.hidden = menus.length === 0;
-    if (menus.length === 0) {
+    searchWrap.hidden = menus.length === 0;
+    // 1위 왕관 기준은 전체 목록으로 계산해 필터된 화면에서도 순위가 정확하다.
+    maxVotes = menus.reduce((max, m) => Math.max(max, m.votes), 0);
+    renderFiltered();
+}
+
+// 현재 검색어를 적용해 목록 영역을 다시 그린다.
+function renderFiltered() {
+    list.innerHTML = '';
+    updateRecommendScope();
+    if (allMenus.length === 0) {
+        renderEmptyState();
+        return;
+    }
+    const filtered = filterMenus(allMenus, searchInput.value);
+    if (filtered.length === 0) {
+        renderNoResults(searchInput.value);
+        return;
+    }
+    for (const m of filtered) {
         const li = document.createElement('li');
-        li.className = 'empty-state';
-        li.innerHTML = `
+        renderView(li, m);
+        list.appendChild(li);
+    }
+}
+
+// 등록된 식당이 하나도 없을 때
+function renderEmptyState() {
+    const li = document.createElement('li');
+    li.className = 'empty-state';
+    li.innerHTML = `
       <div class="empty-art" aria-hidden="true">${ICONS.utensils}</div>
       <p class="empty-title">아직 등록된 식당이 없어요</p>
       <p class="empty-desc">첫 식당을 추가하면 투표와 랜덤 추천을 시작할 수 있어요.</p>
       <button type="button" class="empty-cta">첫 식당 추가하기</button>
     `;
-        li.querySelector('.empty-cta').onclick = () => nameInput.focus();
-        list.appendChild(li);
+    li.querySelector('.empty-cta').onclick = () => nameInput.focus();
+    list.appendChild(li);
+}
+
+// 검색 결과가 없을 때 — 검색어로 바로 추가할 수 있게 유도
+function renderNoResults(query) {
+    const q = query.trim();
+    const li = document.createElement('li');
+    li.className = 'empty-state';
+    li.innerHTML = `
+      <div class="empty-art" aria-hidden="true">${ICONS.search}</div>
+      <p class="empty-title"></p>
+      <p class="empty-desc">찾으시는 식당이 없다면 새로 추가해보세요.</p>
+      <button type="button" class="empty-cta"></button>
+    `;
+    li.querySelector('.empty-title').textContent = `'${q}' 검색 결과가 없어요`;
+    const cta = li.querySelector('.empty-cta');
+    cta.textContent = q ? `'${q}' 추가하기` : '식당 추가하기';
+    cta.onclick = () => {
+        nameInput.value = q;
+        searchInput.value = '';
+        renderFiltered();
+        nameInput.focus();
+    };
+    list.appendChild(li);
+}
+
+// 검색 중이면 "검색 결과 N곳에서 추천" 안내를 띄운다.
+function updateRecommendScope() {
+    const q = searchInput.value.trim();
+    if (!q || allMenus.length === 0) {
+        recommendScope.hidden = true;
         return;
     }
-    maxVotes = menus.reduce((max, m) => Math.max(max, m.votes), 0);
-    for (const m of menus) {
-        const li = document.createElement('li');
-        renderView(li, m);
-        list.appendChild(li);
+    const count = filterMenus(allMenus, searchInput.value).length;
+    if (count === 0) {
+        recommendScope.hidden = true;
+        return;
     }
+    recommendScope.textContent = `검색 결과 ${count}곳에서 추천`;
+    recommendScope.hidden = false;
 }
 
 function renderView(li, m) {
@@ -248,6 +316,7 @@ form.addEventListener('submit', async (e) => {
         return;
     }
     form.reset();
+    searchInput.value = ''; // 추가한 식당이 검색 필터에 가려지지 않도록 초기화
     showToast('추가했어요', 'success');
     loadMenus();
 });
@@ -458,22 +527,29 @@ randomBtn.addEventListener('click', async () => {
     const prevLoc = randomResult.nextElementSibling; // 이전 위치 컨트롤 제거
     if (prevLoc?.classList.contains('loc-wrap')) prevLoc.remove();
 
-    const [winnerRes, listRes] = await Promise.all([fetch('/api/menus/random'), fetch('/api/menus')]);
-
-    if (winnerRes.status === 404) {
-        randomResult.textContent = '식당을 먼저 추가하세요!';
-        randomBtn.disabled = false;
-        return;
-    }
-    if (!winnerRes.ok || !listRes.ok) {
+    // 최신 목록을 받아 검색어가 있으면 그 결과 안에서만 추첨한다(없으면 전체).
+    let menus;
+    try {
+        const listRes = await fetch('/api/menus');
+        if (!listRes.ok) throw new Error('list error');
+        menus = await listRes.json();
+    } catch (err) {
         randomResult.textContent = '오류가 발생했습니다.';
         randomBtn.disabled = false;
         return;
     }
 
-    const winner = await winnerRes.json();
-    const menus = await listRes.json();
-    const names = menus.map((m) => m.name);
+    const pool = filterMenus(menus, searchInput.value);
+    if (pool.length === 0) {
+        randomResult.textContent = searchInput.value.trim()
+            ? '검색 결과가 없어요'
+            : '식당을 먼저 추가하세요!';
+        randomBtn.disabled = false;
+        return;
+    }
+
+    const winner = pool[Math.floor(Math.random() * pool.length)];
+    const names = pool.map((m) => m.name);
 
     // 모션 최소화 선호 시 슬롯머신 연출 생략, 바로 결과 표시
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
