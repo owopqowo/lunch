@@ -113,6 +113,51 @@ test('PATCH /api/menus/:id는 공백 이름이면 400을 반환한다', async ()
   assert.equal(res.status, 400);
 });
 
+test('POST /api/menus는 같은 이름이면 409를 반환한다', async () => {
+  const app = await freshApp();
+  await request(app).post('/api/menus').send({ name: '김밥천국' });
+  const res = await request(app).post('/api/menus').send({ name: '김밥천국' });
+  assert.equal(res.status, 409);
+});
+
+test('POST /api/menus는 공백/대소문자만 다른 이름도 중복으로 막는다', async () => {
+  const app = await freshApp();
+  await request(app).post('/api/menus').send({ name: '김밥천국' });
+  const res = await request(app).post('/api/menus').send({ name: '  김밥 천국 ' });
+  assert.equal(res.status, 409);
+  const list = await request(app).get('/api/menus');
+  assert.equal(list.body.length, 1); // 중복은 저장되지 않는다
+});
+
+test('POST /api/menus 중복 시 기존 값은 원본 공백을 유지한다', async () => {
+  const app = await freshApp();
+  await request(app).post('/api/menus').send({ name: '김밥 천국' });
+  await request(app).post('/api/menus').send({ name: '김밥천국' });
+  const list = await request(app).get('/api/menus');
+  assert.equal(list.body.length, 1);
+  assert.equal(list.body[0].name, '김밥 천국'); // 저장/표시는 원본 그대로
+});
+
+test('PATCH /api/menus/:id는 다른 식당과 이름이 겹치면 409를 반환한다', async () => {
+  const app = await freshApp();
+  await request(app).post('/api/menus').send({ name: '김밥천국' });
+  const other = await request(app).post('/api/menus').send({ name: '돈까스집' });
+  const res = await request(app)
+    .patch(`/api/menus/${other.body.id}`)
+    .send({ name: '김밥 천국' });
+  assert.equal(res.status, 409);
+});
+
+test('PATCH /api/menus/:id는 자기 자신과 정규화가 같은 이름이면 허용한다', async () => {
+  const app = await freshApp();
+  const created = await request(app).post('/api/menus').send({ name: '김밥천국' });
+  const res = await request(app)
+    .patch(`/api/menus/${created.body.id}`)
+    .send({ name: '김밥 천국' });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.name, '김밥 천국');
+});
+
 test('GET /api/config는 KAKAO_JS_KEY가 없으면 kakaoJsKey가 null이다', async () => {
   const prev = process.env.KAKAO_JS_KEY;
   delete process.env.KAKAO_JS_KEY;

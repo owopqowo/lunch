@@ -44,6 +44,14 @@ export function createApp(client) {
       return res.status(400).json({ error: 'name is required' });
     }
     try {
+      const dup = await client.execute({
+        // 공백 제거 + 소문자화는 비교에만 사용 — 저장값은 원본(trim)을 유지한다.
+        sql: "SELECT id FROM menus WHERE lower(replace(name, ' ', '')) = lower(replace(?, ' ', ''))",
+        args: [name.trim()],
+      });
+      if (dup.rows.length > 0) {
+        return res.status(409).json({ error: 'duplicate' });
+      }
       const result = await client.execute({
         sql: 'INSERT INTO menus (name, description) VALUES (?, ?) RETURNING *',
         args: [name.trim(), (typeof description === 'string' && description.trim()) ? description.trim() : null],
@@ -75,6 +83,16 @@ export function createApp(client) {
       return res.status(400).json({ error: 'name cannot be empty' });
     }
     try {
+      if (typeof name === 'string' && name.trim()) {
+        // 다른 식당과 이름이 겹치는지 검사 — 자기 자신은 제외한다.
+        const dup = await client.execute({
+          sql: "SELECT id FROM menus WHERE lower(replace(name, ' ', '')) = lower(replace(?, ' ', '')) AND id != ?",
+          args: [name.trim(), req.params.id],
+        });
+        if (dup.rows.length > 0) {
+          return res.status(409).json({ error: 'duplicate' });
+        }
+      }
       const result = await client.execute({
         sql: `UPDATE menus
                 SET name = COALESCE(?, name),

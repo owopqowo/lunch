@@ -206,7 +206,8 @@ async function saveEdit(li, m, name, description) {
             body: JSON.stringify({ name, description: description.trim() }),
         });
         if (!res.ok) {
-            showToast('수정에 실패했어요', 'error');
+            // 409면 다른 식당과 이름이 겹침 — 편집 상태를 유지한다.
+            showToast(res.status === 409 ? '이미 있는 식당 이름이에요' : '수정에 실패했어요', 'error');
             saveBtn.disabled = false;
             return;
         }
@@ -242,7 +243,8 @@ form.addEventListener('submit', async (e) => {
         body: JSON.stringify({ name, description: descInput.value.trim() }),
     });
     if (!res.ok) {
-        showToast('추가에 실패했어요', 'error');
+        // 409면 이미 등록된 식당 — 폼은 그대로 둬서 바로 고칠 수 있게 한다.
+        showToast(res.status === 409 ? '이미 등록된 식당이에요' : '추가에 실패했어요', 'error');
         return;
     }
     form.reset();
