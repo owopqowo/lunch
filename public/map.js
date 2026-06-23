@@ -73,13 +73,20 @@ export function findPlace(name) {
     const places = new window.kakao.maps.services.Places();
     const options = {
       location: new window.kakao.maps.LatLng(ASSEMBLY.lat, ASSEMBLY.lng),
+      radius: 1000, // 국회의사당 1km 반경으로 한정 (먼 동명이 지역 결과 제외)
       sort: window.kakao.maps.services.SortBy.DISTANCE,
+      // 카테고리 코드로 한정하지 않는다. 음식점·카페·주점 등은 모두
+      // category_group_code가 채워져 있고, 순수 지명/행정구역(예: 가양동)만
+      // 비어 있으므로 "코드가 있는 결과"만 골라 지명을 제외한다.
     };
     places.keywordSearch(
       name,
       (data, status) => {
         if (status === window.kakao.maps.services.Status.OK && data.length > 0) {
-          resolve(data[0]); // 국회의사당에서 가장 가까운 결과
+          // 가장 가까운 순으로 정렬돼 있으므로, 그중 실제 장소
+          // (category_group_code가 있는 것)의 첫 결과를 고른다.
+          const place = data.find((d) => d.category_group_code) || data[0];
+          resolve(place);
         } else {
           resolve(null);
         }
