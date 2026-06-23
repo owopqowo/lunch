@@ -13,3 +13,6 @@ npm-debug.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# 워크트리 (격리 작업 공간)
+.worktrees/
