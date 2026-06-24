@@ -147,8 +147,12 @@ h1 { text-align: center; }
   transition: background 0.15s;
 }
 #add-form button:hover { background: var(--solid-hover); }
+/* 필터 영역: 검색 input + 카테고리 select 한 줄 */
+.filter-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; }
+/* 둘 다 숨겨지면 빈 줄이 남지 않도록 */
+.filter-bar:empty, .filter-bar:not(:has(> :not([hidden]))) { display: none; margin: 0; }
 /* 검색 */
-#search-wrap { margin-bottom: 14px; }
+#search-wrap { flex: 1; min-width: 0; }
 #search-wrap[hidden] { display: none; }
 #search {
   width: 100%; padding: 10px 12px;
@@ -417,10 +421,10 @@ h1 { text-align: center; }
 .map-link svg { flex-shrink: 0; }
 .map-empty { margin: 0 0 8px; color: var(--muted); }
 
-#category-filter-wrap { margin-bottom: 14px; }
+#category-filter-wrap { flex: none; }
 #category-filter-wrap[hidden] { display: none; }
 #category-filter {
-  width: 100%; padding: 10px 12px;
+  max-width: 9rem; padding: 10px 12px;
   border: 1px solid var(--line-strong); border-radius: 8px;
   background: var(--card); color: var(--ink);
   font: inherit; font-size: 0.95rem;
