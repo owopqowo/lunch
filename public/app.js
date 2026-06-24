@@ -22,7 +22,7 @@ const searchWrap = document.getElementById('search-wrap');
 const searchInput = document.getElementById('search');
 const toastContainer = document.getElementById('toast-container');
 const themeToggle = document.getElementById('theme-toggle');
-const categoryControls = document.getElementById('category-controls');
+const categoryFilterWrap = document.getElementById('category-filter-wrap');
 const categoryFilter = document.getElementById('category-filter');
 const categoryRandomBtn = document.getElementById('category-random-btn');
 
@@ -141,7 +141,7 @@ async function loadMenus({ skeleton = false } = {}) {
 // 사용 가능한 카테고리가 없으면 컨트롤 전체를 숨긴다.
 function renderCategoryOptions() {
   const cats = extractCategories(allMenus);
-  categoryControls.hidden = cats.length === 0;
+  categoryFilterWrap.hidden = cats.length === 0;
   const prev = selectedCategory;
   categoryFilter.innerHTML = '<option value="">전체</option>';
   for (const c of cats) {
@@ -235,6 +235,10 @@ function updateRecommendState() {
     const count = currentPool(allMenus).length;
 
     randomBtn.disabled = count < 2;
+
+    // 카테고리 추첨: 검색 적용 목록에서 2곳 이상인 카테고리가 있어야 활성.
+    const eligibleCount = eligibleCategories(filterMenus(allMenus, searchInput.value)).length;
+    categoryRandomBtn.disabled = eligibleCount === 0;
 
     let hint = '';
     if (count >= 2) {
