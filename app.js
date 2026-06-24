@@ -39,13 +39,12 @@ export function createApp(client) {
   });
 
   app.post('/api/menus', async (req, res) => {
-    const { name, description } = req.body ?? {};
+    const { name, description, category } = req.body ?? {};
     if (!name || !name.trim()) {
       return res.status(400).json({ error: 'name is required' });
     }
     try {
       const dup = await client.execute({
-        // 공백 제거 + 소문자화는 비교에만 사용 — 저장값은 원본(trim)을 유지한다.
         sql: "SELECT id FROM menus WHERE lower(replace(name, ' ', '')) = lower(replace(?, ' ', ''))",
         args: [name.trim()],
       });
@@ -53,8 +52,12 @@ export function createApp(client) {
         return res.status(409).json({ error: 'duplicate' });
       }
       const result = await client.execute({
-        sql: 'INSERT INTO menus (name, description) VALUES (?, ?) RETURNING *',
-        args: [name.trim(), (typeof description === 'string' && description.trim()) ? description.trim() : null],
+        sql: 'INSERT INTO menus (name, description, category) VALUES (?, ?, ?) RETURNING *',
+        args: [
+          name.trim(),
+          (typeof description === 'string' && description.trim()) ? description.trim() : null,
+          (typeof category === 'string' && category.trim()) ? category.trim() : null,
+        ],
       });
       res.status(201).json(result.rows[0]);
     } catch (e) {
@@ -78,13 +81,12 @@ export function createApp(client) {
   });
 
   app.patch('/api/menus/:id', async (req, res) => {
-    const { name, description } = req.body ?? {};
+    const { name, description, category } = req.body ?? {};
     if (typeof name === 'string' && !name.trim()) {
       return res.status(400).json({ error: 'name cannot be empty' });
     }
     try {
       if (typeof name === 'string' && name.trim()) {
-        // 다른 식당과 이름이 겹치는지 검사 — 자기 자신은 제외한다.
         const dup = await client.execute({
           sql: "SELECT id FROM menus WHERE lower(replace(name, ' ', '')) = lower(replace(?, ' ', '')) AND id != ?",
           args: [name.trim(), req.params.id],
@@ -96,9 +98,15 @@ export function createApp(client) {
       const result = await client.execute({
         sql: `UPDATE menus
                 SET name = COALESCE(?, name),
-                    description = COALESCE(?, description)
+                    description = COALESCE(?, description),
+                    category = COALESCE(?, category)
               WHERE id = ? RETURNING *`,
-        args: [typeof name === 'string' ? name.trim() : null, description ?? null, req.params.id],
+        args: [
+          typeof name === 'string' ? name.trim() : null,
+          description ?? null,
+          (typeof category === 'string' && category.trim()) ? category.trim() : null,
+          req.params.id,
+        ],
       });
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'not found' });

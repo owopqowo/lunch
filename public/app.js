@@ -5,8 +5,10 @@ import {
   findPlace,
   showMap,
   kakaoSearchUrl,
+  parseCategory,
 } from './map.js';
 import { filterMenus } from './search.js';
+import { extractCategories, matchesCategory, mapCategory, eligibleCategories } from './category.js';
 
 const list = document.getElementById('menu-list');
 const form = document.getElementById('add-form');
@@ -20,9 +22,20 @@ const searchWrap = document.getElementById('search-wrap');
 const searchInput = document.getElementById('search');
 const toastContainer = document.getElementById('toast-container');
 const themeToggle = document.getElementById('theme-toggle');
+const categoryFilterWrap = document.getElementById('category-filter-wrap');
+const categoryFilter = document.getElementById('category-filter');
+const categoryRandomBtn = document.getElementById('category-random-btn');
 
 let maxVotes = 0;
 let allMenus = []; // 마지막으로 불러온 전체 목록 (검색 필터의 원본)
+let selectedCategory = ''; // '' = 전체
+
+// 검색어 + 선택된 카테고리를 AND로 적용한 목록을 반환한다.
+function currentPool(menus) {
+  return filterMenus(menus, searchInput.value).filter((m) =>
+    matchesCategory(m, selectedCategory),
+  );
+}
 
 // 미니멀 라인 아이콘 (Lucide 스타일, stroke = currentColor)
 function icon(paths, size = 20) {
@@ -62,6 +75,11 @@ themeToggle.addEventListener('click', () => {
 
 // 타이핑할 때마다 실시간으로 목록을 필터링한다.
 searchInput.addEventListener('input', renderFiltered);
+
+categoryFilter.addEventListener('change', () => {
+  selectedCategory = categoryFilter.value;
+  renderFiltered();
+});
 
 function showToast(message, type = 'info') {
     const t = document.createElement('div');
@@ -119,8 +137,31 @@ async function loadMenus({ skeleton = false } = {}) {
     }
 }
 
+// allMenus 기준으로 카테고리 옵션을 다시 만든다.
+// 사용 가능한 카테고리가 없으면 드롭다운 래퍼를 숨긴다.
+function renderCategoryOptions() {
+  const cats = extractCategories(allMenus);
+  categoryFilterWrap.hidden = cats.length === 0;
+  const prev = selectedCategory;
+  categoryFilter.innerHTML = '<option value="">전체</option>';
+  for (const c of cats) {
+    const opt = document.createElement('option');
+    opt.value = c;
+    opt.textContent = c;
+    categoryFilter.appendChild(opt);
+  }
+  // 이전 선택이 여전히 유효하면 유지, 아니면 전체로 복귀
+  if (prev && cats.includes(prev)) {
+    categoryFilter.value = prev;
+  } else {
+    selectedCategory = '';
+    categoryFilter.value = '';
+  }
+}
+
 function render(menus) {
     allMenus = menus;
+    renderCategoryOptions();
     // 추천/검색은 식당이 하나라도 있을 때만 의미가 있다.
     recommendSection.hidden = menus.length === 0;
     searchWrap.hidden = menus.length === 0;
@@ -137,7 +178,7 @@ function renderFiltered() {
         renderEmptyState();
         return;
     }
-    const filtered = filterMenus(allMenus, searchInput.value);
+    const filtered = currentPool(allMenus);
     if (filtered.length === 0) {
         renderNoResults(searchInput.value);
         return;
@@ -187,18 +228,24 @@ function renderNoResults(query) {
 }
 
 // 추천 영역 상태 갱신.
-// 추첨은 대상이 2곳 이상일 때만 의미가 있으므로, 미만이면 버튼을 비활성화하고 이유를 안내한다.
+// 식당 추첨은 풀이 2곳 이상, 카테고리 추첨은 2곳 이상인 카테고리가 있을 때만 의미가 있다.
+// 미만이면 각 버튼을 비활성화하고 이유를 안내한다.
 function updateRecommendState() {
     const q = searchInput.value.trim();
-    const count = filterMenus(allMenus, searchInput.value).length;
+    const filtered = q || selectedCategory;
+    const count = currentPool(allMenus).length;
 
     randomBtn.disabled = count < 2;
 
+    // 카테고리 추첨: 검색 적용 목록에서 2곳 이상인 카테고리가 있어야 활성.
+    const eligibleCount = eligibleCategories(filterMenus(allMenus, searchInput.value)).length;
+    categoryRandomBtn.disabled = eligibleCount === 0;
+
     let hint = '';
     if (count >= 2) {
-        hint = q ? `검색 결과 ${count}곳에서 추천` : ''; // 전체 추첨이면 안내 불필요
+        hint = filtered ? `${count}곳에서 추천` : ''; // 전체 추첨이면 안내 불필요
     } else if (count === 1) {
-        hint = q ? '검색 결과가 1곳이에요' : '식당이 1곳뿐이에요';
+        hint = filtered ? '1곳뿐이에요' : '식당이 1곳뿐이에요';
     } // count === 0 → 목록에 '검색 결과 없음'이 표시되므로 별도 안내 생략
 
     recommendScope.textContent = hint;
@@ -304,6 +351,28 @@ function renderDeleteConfirm(li, m) {
     li.querySelector('.cancel-btn').onclick = () => renderView(li, m);
 }
 
+// 식당명으로 카카오를 조회해 카테고리를 알아내고, 해당 메뉴에 PATCH한다.
+// 키 없음/조회 실패 시 조용히 스킵(카테고리는 null로 남음).
+async function fillCategory(menu) {
+  if (!isLocationEnabled() || !menu || menu.category) return;
+  const ok = await loadKakao();
+  if (!ok) return;
+  const place = await findPlace(menu.name);
+  if (!place) return;
+  // 카카오 중분류를 우리 점심 분류(한식/중식/일식/양식/아시안/분식/샐러드)로 매핑한다.
+  const category = mapCategory(parseCategory(place));
+  if (!category) return;
+  try {
+    await fetch(`/api/menus/${menu.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category }),
+    });
+  } catch {
+    /* 자동 채움 실패는 무시 — 다음 백필에서 재시도됨 */
+  }
+}
+
 form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = nameInput.value.trim();
@@ -318,10 +387,13 @@ form.addEventListener('submit', async (e) => {
         showToast(res.status === 409 ? '이미 등록된 식당이에요' : '추가에 실패했어요', 'error');
         return;
     }
+    const created = await res.json();
     form.reset();
     searchInput.value = ''; // 추가한 식당이 검색 필터에 가려지지 않도록 초기화
     showToast('추가했어요', 'success');
-    loadMenus();
+    loadMenus(); // 즉시 목록 반영(카테고리는 아직 null일 수 있음)
+    // 백그라운드로 카테고리 채운 뒤 한 번 더 갱신
+    fillCategory(created).then(() => loadMenus());
 });
 
 async function vote(id, btn) {
@@ -522,15 +594,44 @@ function burstStars(originEl) {
     }
 }
 
+// 슬롯머신 + 별 터짐 공유 연출. labels를 흘리다 winnerLabel에서 멈춘다.
+async function playSlot(labels, winnerLabel) {
+  randomResult.classList.remove('winner');
+  randomResult.textContent = ''; // 이전 결과 즉시 제거
+
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!reduceMotion && labels.length > 0) {
+    randomResult.classList.add('rolling');
+    let delay = 60;
+    for (let i = 0; i < 18; i++) {
+      randomResult.textContent = labels[Math.floor(Math.random() * labels.length)];
+      await sleep(delay);
+      delay += 18; // 점점 느려지게
+    }
+    randomResult.classList.remove('rolling');
+  }
+
+  randomResult.textContent = `오늘은 → ${winnerLabel}`;
+  // winner 애니메이션 재시작(연속 추첨 시에도 매번 재생되도록 reflow 트리거)
+  randomResult.classList.remove('winner');
+  void randomResult.offsetWidth;
+  randomResult.classList.add('winner');
+
+  if (!reduceMotion) {
+    burstStars(randomResult);
+    randomBtn.classList.add('fired');
+    randomBtn.addEventListener('animationend', () => randomBtn.classList.remove('fired'), { once: true });
+  }
+}
+
 randomBtn.addEventListener('click', async () => {
     if (randomBtn.disabled) return;
     randomBtn.disabled = true;
-    randomResult.classList.remove('winner');
-    randomResult.textContent = ''; // 이전 추첨 결과 즉시 제거
+    categoryRandomBtn.disabled = true; // 연출 중에는 카테고리 추첨도 막아 결과 자리 충돌 방지
     const prevLoc = randomResult.nextElementSibling; // 이전 위치 컨트롤 제거
     if (prevLoc?.classList.contains('loc-wrap')) prevLoc.remove();
 
-    // 최신 목록을 받아 검색어가 있으면 그 결과 안에서만 추첨한다(없으면 전체).
+    // 최신 목록을 받아 현재 필터(검색+카테고리) 안에서만 추첨한다.
     let menus;
     try {
         const listRes = await fetch('/api/menus');
@@ -538,51 +639,68 @@ randomBtn.addEventListener('click', async () => {
         menus = await listRes.json();
     } catch (err) {
         randomResult.textContent = '오류가 발생했습니다.';
-        randomBtn.disabled = false;
+        updateRecommendState(); // 두 버튼 상태 복구
         return;
     }
 
-    const pool = filterMenus(menus, searchInput.value);
+    const pool = currentPool(menus);
     if (pool.length === 0) {
         randomResult.textContent = searchInput.value.trim()
             ? '검색 결과가 없어요'
             : '식당을 먼저 추가하세요!';
-        randomBtn.disabled = false;
+        updateRecommendState(); // 두 버튼 상태 복구
         return;
     }
 
     const winner = pool[Math.floor(Math.random() * pool.length)];
-    const names = pool.map((m) => m.name);
-
-    // 모션 최소화 선호 시 슬롯머신 연출 생략, 바로 결과 표시
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (!reduceMotion) {
-        // 슬롯머신 연출: 빠르게 돌다가 점점 느려진 뒤 당첨 식당에서 멈춤
-        randomResult.classList.add('rolling');
-        let delay = 60;
-        for (let i = 0; i < 18; i++) {
-            randomResult.textContent = names[Math.floor(Math.random() * names.length)];
-            await sleep(delay);
-            delay += 18; // 점점 느려지게
-        }
-        randomResult.classList.remove('rolling');
-    }
-
-    randomResult.textContent = `오늘은 → ${winner.name}`;
-    // winner 애니메이션 재시작(연속 추첨 시에도 매번 재생되도록 reflow 트리거)
-    randomResult.classList.remove('winner');
-    void randomResult.offsetWidth;
-    randomResult.classList.add('winner');
-
-    if (!reduceMotion) {
-        burstStars(randomResult);
-        randomBtn.classList.add('fired');
-        randomBtn.addEventListener('animationend', () => randomBtn.classList.remove('fired'), { once: true });
-    }
+    await playSlot(pool.map((m) => m.name), winner.name);
 
     const ctrl = createLocationControl(winner.name);
     if (ctrl) randomResult.insertAdjacentElement('afterend', ctrl);
-    randomBtn.disabled = false;
+    updateRecommendState(); // 두 버튼 상태 복구
 });
 
-initConfig().then(() => loadMenus({ skeleton: true }));
+categoryRandomBtn.addEventListener('click', async () => {
+  if (categoryRandomBtn.disabled) return;
+  categoryRandomBtn.disabled = true;
+  randomBtn.disabled = true; // 연출 중에는 식당 추첨도 막아 결과 자리 충돌 방지
+  const prevLoc = randomResult.nextElementSibling; // 이전 위치 컨트롤 제거
+  if (prevLoc?.classList.contains('loc-wrap')) prevLoc.remove();
+
+  // 검색이 적용된 목록에서 2곳 이상인 카테고리만 후보.
+  const inSearch = filterMenus(allMenus, searchInput.value);
+  const eligible = eligibleCategories(inSearch);
+  if (eligible.length === 0) {
+    randomResult.textContent = '추첨할 메뉴 종류가 부족해요';
+    categoryRandomBtn.disabled = false;
+    randomBtn.disabled = currentPool(allMenus).length < 2;
+    return;
+  }
+
+  const picked = eligible[Math.floor(Math.random() * eligible.length)];
+  await playSlot(eligible, picked);
+
+  // 당첨 카테고리로 필터 동기화 → 목록이 그 카테고리만 남는다.
+  selectedCategory = picked;
+  categoryFilter.value = picked;
+  renderFiltered();
+});
+
+// 앱 시작 시 category가 비어있는 메뉴들을 순차로(병렬 금지, rate limit) 채운다.
+async function backfillCategories() {
+  if (!isLocationEnabled()) return;
+  const res = await fetch('/api/menus');
+  if (!res.ok) return;
+  const menus = await res.json();
+  const pending = menus.filter((m) => !m.category);
+  if (pending.length === 0) return;
+  for (const m of pending) {
+    await fillCategory(m); // 순차 — 카카오 호출 폭주 방지
+  }
+  loadMenus(); // 채운 결과 반영
+}
+
+initConfig().then(async () => {
+  await loadMenus({ skeleton: true });
+  backfillCategories(); // 비차단 백그라운드
+});

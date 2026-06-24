@@ -1,6 +1,9 @@
 // 카카오맵 SDK 로드 + 장소 검색 + 지도 렌더를 담당하는 모듈.
 // 국회의사당(여의도) 기준으로 가장 가까운 장소를 선택한다.
 
+import { parseCategory } from './category.js';
+export { parseCategory };
+
 const ASSEMBLY = { lat: 37.5318, lng: 126.9143 }; // 국회의사당
 
 // 새 탭으로 열림을 나타내는 외부 링크 아이콘 (Lucide external-link)

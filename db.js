@@ -14,4 +14,10 @@ export async function initSchema(client) {
       created_at  TEXT    DEFAULT (datetime('now'))
     )
   `);
+  // 기존 테이블에는 CREATE TABLE IF NOT EXISTS로 컬럼이 안 붙으므로 별도 마이그레이션.
+  const cols = await client.execute('PRAGMA table_info(menus)');
+  const hasCategory = cols.rows.some((r) => r.name === 'category');
+  if (!hasCategory) {
+    await client.execute('ALTER TABLE menus ADD COLUMN category TEXT');
+  }
 }
