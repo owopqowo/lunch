@@ -650,4 +650,36 @@ randomBtn.addEventListener('click', async () => {
     randomBtn.disabled = false;
 });
 
-initConfig().then(() => loadMenus({ skeleton: true }));
+categoryRandomBtn.addEventListener('click', () => {
+  // 현재 검색 적용된 목록에 존재하는 카테고리 중에서 뽑는다.
+  const inSearch = filterMenus(allMenus, searchInput.value);
+  const cats = extractCategories(inSearch);
+  if (cats.length === 0) {
+    showToast('추첨할 카테고리가 없어요', 'info');
+    return;
+  }
+  const picked = cats[Math.floor(Math.random() * cats.length)];
+  selectedCategory = picked;
+  categoryFilter.value = picked;
+  showToast(`오늘은 → ${picked}`, 'success');
+  renderFiltered();
+});
+
+// 앱 시작 시 category가 비어있는 메뉴들을 순차로(병렬 금지, rate limit) 채운다.
+async function backfillCategories() {
+  if (!isLocationEnabled()) return;
+  const res = await fetch('/api/menus');
+  if (!res.ok) return;
+  const menus = await res.json();
+  const pending = menus.filter((m) => !m.category);
+  if (pending.length === 0) return;
+  for (const m of pending) {
+    await fillCategory(m); // 순차 — 카카오 호출 폭주 방지
+  }
+  loadMenus(); // 채운 결과 반영
+}
+
+initConfig().then(async () => {
+  await loadMenus({ skeleton: true });
+  backfillCategories(); // 비차단 백그라운드
+});
