@@ -1,6 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseCategory, extractCategories, matchesCategory, mapCategory } from '../public/category.js';
+import {
+  parseCategory,
+  extractCategories,
+  matchesCategory,
+  mapCategory,
+  eligibleCategories,
+} from '../public/category.js';
 
 test('parseCategory는 중분류(2번째 토큰)를 반환한다', () => {
   assert.equal(parseCategory({ category_name: '음식점 > 한식 > 육류,고기' }), '한식');
@@ -78,4 +84,22 @@ test('mapCategory는 falsy 입력이면 null을 반환한다', () => {
   assert.equal(mapCategory(null), null);
   assert.equal(mapCategory(''), null);
   assert.equal(mapCategory(undefined), null);
+});
+
+test('eligibleCategories는 2곳 이상인 카테고리만 정렬해 반환한다', () => {
+  const menus = [
+    { category: '한식' },
+    { category: '한식' },
+    { category: '일식' }, // 1곳뿐 → 제외
+    { category: '중식' },
+    { category: '중식' },
+    { category: null }, // 무시
+  ];
+  assert.deepEqual(eligibleCategories(menus), ['중식', '한식']);
+});
+
+test('eligibleCategories는 후보가 없으면 빈 배열', () => {
+  assert.deepEqual(eligibleCategories([]), []);
+  assert.deepEqual(eligibleCategories([{ category: '한식' }]), []); // 1곳뿐
+  assert.deepEqual(eligibleCategories([{ category: null }, { category: null }]), []);
 });

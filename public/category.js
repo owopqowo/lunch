@@ -45,3 +45,14 @@ export function matchesCategory(menu, category) {
   if (!category) return true;
   return menu.category === category;
 }
+
+// 식당이 2곳 이상인 카테고리만 (추첨 후보). null/단독 카테고리는 제외, 정렬.
+export function eligibleCategories(menus) {
+  const counts = {};
+  for (const m of menus) {
+    if (m.category) counts[m.category] = (counts[m.category] || 0) + 1;
+  }
+  return Object.keys(counts)
+    .filter((c) => counts[c] >= 2)
+    .sort((a, b) => a.localeCompare(b, 'ko'));
+}
