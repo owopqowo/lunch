@@ -8,6 +8,7 @@ import {
   parseCategory,
 } from './map.js';
 import { filterMenus } from './search.js';
+import { extractCategories, matchesCategory } from './category.js';
 
 const list = document.getElementById('menu-list');
 const form = document.getElementById('add-form');
@@ -21,9 +22,13 @@ const searchWrap = document.getElementById('search-wrap');
 const searchInput = document.getElementById('search');
 const toastContainer = document.getElementById('toast-container');
 const themeToggle = document.getElementById('theme-toggle');
+const categoryControls = document.getElementById('category-controls');
+const categoryFilter = document.getElementById('category-filter');
+const categoryRandomBtn = document.getElementById('category-random-btn');
 
 let maxVotes = 0;
 let allMenus = []; // 마지막으로 불러온 전체 목록 (검색 필터의 원본)
+let selectedCategory = ''; // '' = 전체
 
 // 미니멀 라인 아이콘 (Lucide 스타일, stroke = currentColor)
 function icon(paths, size = 20) {
@@ -63,6 +68,11 @@ themeToggle.addEventListener('click', () => {
 
 // 타이핑할 때마다 실시간으로 목록을 필터링한다.
 searchInput.addEventListener('input', renderFiltered);
+
+categoryFilter.addEventListener('change', () => {
+  selectedCategory = categoryFilter.value;
+  renderFiltered();
+});
 
 function showToast(message, type = 'info') {
     const t = document.createElement('div');
@@ -120,8 +130,31 @@ async function loadMenus({ skeleton = false } = {}) {
     }
 }
 
+// allMenus 기준으로 카테고리 옵션을 다시 만든다.
+// 사용 가능한 카테고리가 없으면 컨트롤 전체를 숨긴다.
+function renderCategoryOptions() {
+  const cats = extractCategories(allMenus);
+  categoryControls.hidden = cats.length === 0;
+  const prev = selectedCategory;
+  categoryFilter.innerHTML = '<option value="">전체</option>';
+  for (const c of cats) {
+    const opt = document.createElement('option');
+    opt.value = c;
+    opt.textContent = c;
+    categoryFilter.appendChild(opt);
+  }
+  // 이전 선택이 여전히 유효하면 유지, 아니면 전체로 복귀
+  if (prev && cats.includes(prev)) {
+    categoryFilter.value = prev;
+  } else {
+    selectedCategory = '';
+    categoryFilter.value = '';
+  }
+}
+
 function render(menus) {
     allMenus = menus;
+    renderCategoryOptions();
     // 추천/검색은 식당이 하나라도 있을 때만 의미가 있다.
     recommendSection.hidden = menus.length === 0;
     searchWrap.hidden = menus.length === 0;

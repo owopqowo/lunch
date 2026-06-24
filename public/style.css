@@ -411,3 +411,27 @@ h1 { text-align: center; }
 }
 .map-link svg { flex-shrink: 0; }
 .map-empty { margin: 0 0 8px; color: var(--muted); }
+
+.category-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.category-controls select {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+}
+.category-controls #category-random-btn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: inherit;
+  cursor: pointer;
+}

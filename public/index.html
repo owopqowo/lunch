@@ -30,6 +30,12 @@
             <h1>오늘 뭐 먹지?</h1>
 
             <section class="recommend">
+                <div class="category-controls" id="category-controls" hidden>
+                  <select id="category-filter" aria-label="음식 카테고리 선택">
+                    <option value="">전체</option>
+                  </select>
+                  <button type="button" id="category-random-btn">🎲 카테고리 추첨</button>
+                </div>
                 <button id="random-btn">
                     <svg
                         viewBox="0 0 24 24"
