@@ -627,6 +627,7 @@ async function playSlot(labels, winnerLabel) {
 randomBtn.addEventListener('click', async () => {
     if (randomBtn.disabled) return;
     randomBtn.disabled = true;
+    categoryRandomBtn.disabled = true; // 연출 중에는 카테고리 추첨도 막아 결과 자리 충돌 방지
     const prevLoc = randomResult.nextElementSibling; // 이전 위치 컨트롤 제거
     if (prevLoc?.classList.contains('loc-wrap')) prevLoc.remove();
 
@@ -638,7 +639,7 @@ randomBtn.addEventListener('click', async () => {
         menus = await listRes.json();
     } catch (err) {
         randomResult.textContent = '오류가 발생했습니다.';
-        randomBtn.disabled = false;
+        updateRecommendState(); // 두 버튼 상태 복구
         return;
     }
 
@@ -647,7 +648,7 @@ randomBtn.addEventListener('click', async () => {
         randomResult.textContent = searchInput.value.trim()
             ? '검색 결과가 없어요'
             : '식당을 먼저 추가하세요!';
-        randomBtn.disabled = false;
+        updateRecommendState(); // 두 버튼 상태 복구
         return;
     }
 
@@ -656,7 +657,7 @@ randomBtn.addEventListener('click', async () => {
 
     const ctrl = createLocationControl(winner.name);
     if (ctrl) randomResult.insertAdjacentElement('afterend', ctrl);
-    randomBtn.disabled = false;
+    updateRecommendState(); // 두 버튼 상태 복구
 });
 
 categoryRandomBtn.addEventListener('click', async () => {
