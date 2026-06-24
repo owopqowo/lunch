@@ -231,15 +231,16 @@ function renderNoResults(query) {
 // 추첨은 대상이 2곳 이상일 때만 의미가 있으므로, 미만이면 버튼을 비활성화하고 이유를 안내한다.
 function updateRecommendState() {
     const q = searchInput.value.trim();
+    const filtered = q || selectedCategory;
     const count = currentPool(allMenus).length;
 
     randomBtn.disabled = count < 2;
 
     let hint = '';
     if (count >= 2) {
-        hint = q ? `검색 결과 ${count}곳에서 추천` : ''; // 전체 추첨이면 안내 불필요
+        hint = filtered ? `${count}곳에서 추천` : ''; // 전체 추첨이면 안내 불필요
     } else if (count === 1) {
-        hint = q ? '검색 결과가 1곳이에요' : '식당이 1곳뿐이에요';
+        hint = filtered ? '1곳뿐이에요' : '식당이 1곳뿐이에요';
     } // count === 0 → 목록에 '검색 결과 없음'이 표시되므로 별도 안내 생략
 
     recommendScope.textContent = hint;
@@ -651,14 +652,18 @@ randomBtn.addEventListener('click', async () => {
 });
 
 categoryRandomBtn.addEventListener('click', () => {
-  // 현재 검색 적용된 목록에 존재하는 카테고리 중에서 뽑는다.
+  // 현재 검색 적용된 목록에서 2곳 이상인 카테고리만 추첨 대상으로 삼는다.
   const inSearch = filterMenus(allMenus, searchInput.value);
-  const cats = extractCategories(inSearch);
-  if (cats.length === 0) {
+  const catCounts = {};
+  for (const m of inSearch) {
+    if (m.category) catCounts[m.category] = (catCounts[m.category] || 0) + 1;
+  }
+  const eligible = Object.keys(catCounts).filter((c) => catCounts[c] >= 2);
+  if (eligible.length === 0) {
     showToast('추첨할 카테고리가 없어요', 'info');
     return;
   }
-  const picked = cats[Math.floor(Math.random() * cats.length)];
+  const picked = eligible[Math.floor(Math.random() * eligible.length)];
   selectedCategory = picked;
   categoryFilter.value = picked;
   showToast(`오늘은 → ${picked}`, 'success');
