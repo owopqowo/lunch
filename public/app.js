@@ -8,7 +8,7 @@ import {
   parseCategory,
 } from './map.js';
 import { filterMenus } from './search.js';
-import { extractCategories, matchesCategory } from './category.js';
+import { extractCategories, matchesCategory, mapCategory } from './category.js';
 
 const list = document.getElementById('menu-list');
 const form = document.getElementById('add-form');
@@ -354,7 +354,8 @@ async function fillCategory(menu) {
   if (!ok) return;
   const place = await findPlace(menu.name);
   if (!place) return;
-  const category = parseCategory(place);
+  // 카카오 중분류를 우리 점심 분류(한식/중식/일식/양식/아시안/분식/샐러드)로 매핑한다.
+  const category = mapCategory(parseCategory(place));
   if (!category) return;
   try {
     await fetch(`/api/menus/${menu.id}`, {

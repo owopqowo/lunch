@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseCategory, extractCategories, matchesCategory } from '../public/category.js';
+import { parseCategory, extractCategories, matchesCategory, mapCategory } from '../public/category.js';
 
 test('parseCategory는 중분류(2번째 토큰)를 반환한다', () => {
   assert.equal(parseCategory({ category_name: '음식점 > 한식 > 육류,고기' }), '한식');
@@ -42,4 +42,40 @@ test('matchesCategory는 정확히 일치할 때만 true', () => {
   assert.equal(matchesCategory({ category: '한식' }, '한식'), true);
   assert.equal(matchesCategory({ category: '일식' }, '한식'), false);
   assert.equal(matchesCategory({ category: null }, '한식'), false);
+});
+
+test('mapCategory는 카카오 중분류를 점심 분류로 통합한다', () => {
+  // 한식 계열
+  assert.equal(mapCategory('한식'), '한식');
+  assert.equal(mapCategory('구내식당'), '한식');
+  // 중식
+  assert.equal(mapCategory('중식'), '중식');
+  // 일식 계열 (술집·퓨전요리는 확인 결과 일식)
+  assert.equal(mapCategory('일식'), '일식');
+  assert.equal(mapCategory('술집'), '일식');
+  assert.equal(mapCategory('퓨전요리'), '일식');
+  // 양식
+  assert.equal(mapCategory('양식'), '양식');
+  // 아시안
+  assert.equal(mapCategory('아시아음식'), '아시안');
+  // 분식 계열 (슈퍼마켓 포함)
+  assert.equal(mapCategory('분식'), '분식');
+  assert.equal(mapCategory('슈퍼마켓'), '분식');
+  // 샐러드 계열 (패스트푸드·카페 포함)
+  assert.equal(mapCategory('샐러드'), '샐러드');
+  assert.equal(mapCategory('패스트푸드'), '샐러드');
+  assert.equal(mapCategory('카페'), '샐러드');
+});
+
+test('mapCategory는 매핑에 없는 값은 원본 그대로 둔다', () => {
+  // 카카오가 엉뚱한 장소를 집은 경우(교통시설 등)는 매핑하지 않고 보존 —
+  // 개별 식당 보정은 데이터 레벨에서 처리한다.
+  assert.equal(mapCategory('교통시설'), '교통시설');
+  assert.equal(mapCategory('약국'), '약국');
+});
+
+test('mapCategory는 falsy 입력이면 null을 반환한다', () => {
+  assert.equal(mapCategory(null), null);
+  assert.equal(mapCategory(''), null);
+  assert.equal(mapCategory(undefined), null);
 });
