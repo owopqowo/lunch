@@ -5,6 +5,7 @@ import {
   findPlace,
   showMap,
   kakaoSearchUrl,
+  parseCategory,
 } from './map.js';
 import { filterMenus } from './search.js';
 
@@ -304,6 +305,27 @@ function renderDeleteConfirm(li, m) {
     li.querySelector('.cancel-btn').onclick = () => renderView(li, m);
 }
 
+// 식당명으로 카카오를 조회해 카테고리를 알아내고, 해당 메뉴에 PATCH한다.
+// 키 없음/조회 실패 시 조용히 스킵(카테고리는 null로 남음).
+async function fillCategory(menu) {
+  if (!isLocationEnabled() || !menu || menu.category) return;
+  const ok = await loadKakao();
+  if (!ok) return;
+  const place = await findPlace(menu.name);
+  if (!place) return;
+  const category = parseCategory(place);
+  if (!category) return;
+  try {
+    await fetch(`/api/menus/${menu.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category }),
+    });
+  } catch {
+    /* 자동 채움 실패는 무시 — 다음 백필에서 재시도됨 */
+  }
+}
+
 form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = nameInput.value.trim();
@@ -318,10 +340,13 @@ form.addEventListener('submit', async (e) => {
         showToast(res.status === 409 ? '이미 등록된 식당이에요' : '추가에 실패했어요', 'error');
         return;
     }
+    const created = await res.json();
     form.reset();
     searchInput.value = ''; // 추가한 식당이 검색 필터에 가려지지 않도록 초기화
     showToast('추가했어요', 'success');
-    loadMenus();
+    loadMenus(); // 즉시 목록 반영(카테고리는 아직 null일 수 있음)
+    // 백그라운드로 카테고리 채운 뒤 한 번 더 갱신
+    fillCategory(created).then(() => loadMenus());
 });
 
 async function vote(id, btn) {
