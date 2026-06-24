@@ -184,3 +184,43 @@ test('GET /api/config는 KAKAO_JS_KEY가 있으면 그 값을 반환한다', asy
     else delete process.env.KAKAO_JS_KEY;
   }
 });
+
+test('POST /api/menus는 category를 저장한다', async () => {
+  const app = await freshApp();
+  const res = await request(app)
+    .post('/api/menus')
+    .send({ name: '한식당', category: '한식' });
+  assert.equal(res.status, 201);
+  assert.equal(res.body.category, '한식');
+});
+
+test('POST /api/menus는 category 미지정 시 null이다', async () => {
+  const app = await freshApp();
+  const res = await request(app).post('/api/menus').send({ name: '미분류집' });
+  assert.equal(res.status, 201);
+  assert.equal(res.body.category, null);
+});
+
+test('PATCH /api/menus/:id는 category만 갱신한다', async () => {
+  const app = await freshApp();
+  const created = await request(app).post('/api/menus').send({ name: '국밥집' });
+  const res = await request(app)
+    .patch(`/api/menus/${created.body.id}`)
+    .send({ category: '한식' });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.category, '한식');
+  assert.equal(res.body.name, '국밥집'); // 이름은 그대로
+});
+
+test('PATCH /api/menus/:id는 category 미지정 시 기존 category를 유지한다', async () => {
+  const app = await freshApp();
+  const created = await request(app)
+    .post('/api/menus')
+    .send({ name: '일식집', category: '일식' });
+  const res = await request(app)
+    .patch(`/api/menus/${created.body.id}`)
+    .send({ description: '초밥' });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.category, '일식'); // 유지
+  assert.equal(res.body.description, '초밥');
+});
