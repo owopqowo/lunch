@@ -30,6 +30,13 @@ let maxVotes = 0;
 let allMenus = []; // 마지막으로 불러온 전체 목록 (검색 필터의 원본)
 let selectedCategory = ''; // '' = 전체
 
+// 검색어 + 선택된 카테고리를 AND로 적용한 목록을 반환한다.
+function currentPool(menus) {
+  return filterMenus(menus, searchInput.value).filter((m) =>
+    matchesCategory(m, selectedCategory),
+  );
+}
+
 // 미니멀 라인 아이콘 (Lucide 스타일, stroke = currentColor)
 function icon(paths, size = 20) {
     return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
@@ -171,7 +178,7 @@ function renderFiltered() {
         renderEmptyState();
         return;
     }
-    const filtered = filterMenus(allMenus, searchInput.value);
+    const filtered = currentPool(allMenus);
     if (filtered.length === 0) {
         renderNoResults(searchInput.value);
         return;
@@ -224,7 +231,7 @@ function renderNoResults(query) {
 // 추첨은 대상이 2곳 이상일 때만 의미가 있으므로, 미만이면 버튼을 비활성화하고 이유를 안내한다.
 function updateRecommendState() {
     const q = searchInput.value.trim();
-    const count = filterMenus(allMenus, searchInput.value).length;
+    const count = currentPool(allMenus).length;
 
     randomBtn.disabled = count < 2;
 
@@ -600,7 +607,7 @@ randomBtn.addEventListener('click', async () => {
         return;
     }
 
-    const pool = filterMenus(menus, searchInput.value);
+    const pool = currentPool(menus);
     if (pool.length === 0) {
         randomResult.textContent = searchInput.value.trim()
             ? '검색 결과가 없어요'
