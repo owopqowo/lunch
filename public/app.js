@@ -8,7 +8,7 @@ import {
   parseCategory,
 } from './map.js';
 import { filterMenus } from './search.js';
-import { extractCategories, matchesCategory, mapCategory } from './category.js';
+import { extractCategories, matchesCategory, mapCategory, eligibleCategories } from './category.js';
 
 const list = document.getElementById('menu-list');
 const form = document.getElementById('add-form');
@@ -654,22 +654,29 @@ randomBtn.addEventListener('click', async () => {
     randomBtn.disabled = false;
 });
 
-categoryRandomBtn.addEventListener('click', () => {
-  // 현재 검색 적용된 목록에서 2곳 이상인 카테고리만 추첨 대상으로 삼는다.
+categoryRandomBtn.addEventListener('click', async () => {
+  if (categoryRandomBtn.disabled) return;
+  categoryRandomBtn.disabled = true;
+  randomBtn.disabled = true; // 연출 중에는 식당 추첨도 막아 결과 자리 충돌 방지
+  const prevLoc = randomResult.nextElementSibling; // 이전 위치 컨트롤 제거
+  if (prevLoc?.classList.contains('loc-wrap')) prevLoc.remove();
+
+  // 검색이 적용된 목록에서 2곳 이상인 카테고리만 후보.
   const inSearch = filterMenus(allMenus, searchInput.value);
-  const catCounts = {};
-  for (const m of inSearch) {
-    if (m.category) catCounts[m.category] = (catCounts[m.category] || 0) + 1;
-  }
-  const eligible = Object.keys(catCounts).filter((c) => catCounts[c] >= 2);
+  const eligible = eligibleCategories(inSearch);
   if (eligible.length === 0) {
-    showToast('추첨할 카테고리가 없어요', 'info');
+    randomResult.textContent = '추첨할 메뉴 종류가 부족해요';
+    categoryRandomBtn.disabled = false;
+    randomBtn.disabled = currentPool(allMenus).length < 2;
     return;
   }
+
   const picked = eligible[Math.floor(Math.random() * eligible.length)];
+  await playSlot(eligible, picked);
+
+  // 당첨 카테고리로 필터 동기화 → 목록이 그 카테고리만 남는다.
   selectedCategory = picked;
   categoryFilter.value = picked;
-  showToast(`오늘은 → ${picked}`, 'success');
   renderFiltered();
 });
 
