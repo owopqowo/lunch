@@ -138,7 +138,7 @@ async function loadMenus({ skeleton = false } = {}) {
 }
 
 // allMenus 기준으로 카테고리 옵션을 다시 만든다.
-// 사용 가능한 카테고리가 없으면 컨트롤 전체를 숨긴다.
+// 사용 가능한 카테고리가 없으면 드롭다운 래퍼를 숨긴다.
 function renderCategoryOptions() {
   const cats = extractCategories(allMenus);
   categoryFilterWrap.hidden = cats.length === 0;
@@ -228,7 +228,8 @@ function renderNoResults(query) {
 }
 
 // 추천 영역 상태 갱신.
-// 추첨은 대상이 2곳 이상일 때만 의미가 있으므로, 미만이면 버튼을 비활성화하고 이유를 안내한다.
+// 식당 추첨은 풀이 2곳 이상, 카테고리 추첨은 2곳 이상인 카테고리가 있을 때만 의미가 있다.
+// 미만이면 각 버튼을 비활성화하고 이유를 안내한다.
 function updateRecommendState() {
     const q = searchInput.value.trim();
     const filtered = q || selectedCategory;
