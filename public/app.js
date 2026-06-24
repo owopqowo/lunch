@@ -589,15 +589,43 @@ function burstStars(originEl) {
     }
 }
 
+// 슬롯머신 + 별 터짐 공유 연출. labels를 흘리다 winnerLabel에서 멈춘다.
+async function playSlot(labels, winnerLabel) {
+  randomResult.classList.remove('winner');
+  randomResult.textContent = ''; // 이전 결과 즉시 제거
+
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!reduceMotion && labels.length > 0) {
+    randomResult.classList.add('rolling');
+    let delay = 60;
+    for (let i = 0; i < 18; i++) {
+      randomResult.textContent = labels[Math.floor(Math.random() * labels.length)];
+      await sleep(delay);
+      delay += 18; // 점점 느려지게
+    }
+    randomResult.classList.remove('rolling');
+  }
+
+  randomResult.textContent = `오늘은 → ${winnerLabel}`;
+  // winner 애니메이션 재시작(연속 추첨 시에도 매번 재생되도록 reflow 트리거)
+  randomResult.classList.remove('winner');
+  void randomResult.offsetWidth;
+  randomResult.classList.add('winner');
+
+  if (!reduceMotion) {
+    burstStars(randomResult);
+    randomBtn.classList.add('fired');
+    randomBtn.addEventListener('animationend', () => randomBtn.classList.remove('fired'), { once: true });
+  }
+}
+
 randomBtn.addEventListener('click', async () => {
     if (randomBtn.disabled) return;
     randomBtn.disabled = true;
-    randomResult.classList.remove('winner');
-    randomResult.textContent = ''; // 이전 추첨 결과 즉시 제거
     const prevLoc = randomResult.nextElementSibling; // 이전 위치 컨트롤 제거
     if (prevLoc?.classList.contains('loc-wrap')) prevLoc.remove();
 
-    // 최신 목록을 받아 검색어가 있으면 그 결과 안에서만 추첨한다(없으면 전체).
+    // 최신 목록을 받아 현재 필터(검색+카테고리) 안에서만 추첨한다.
     let menus;
     try {
         const listRes = await fetch('/api/menus');
@@ -619,33 +647,7 @@ randomBtn.addEventListener('click', async () => {
     }
 
     const winner = pool[Math.floor(Math.random() * pool.length)];
-    const names = pool.map((m) => m.name);
-
-    // 모션 최소화 선호 시 슬롯머신 연출 생략, 바로 결과 표시
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (!reduceMotion) {
-        // 슬롯머신 연출: 빠르게 돌다가 점점 느려진 뒤 당첨 식당에서 멈춤
-        randomResult.classList.add('rolling');
-        let delay = 60;
-        for (let i = 0; i < 18; i++) {
-            randomResult.textContent = names[Math.floor(Math.random() * names.length)];
-            await sleep(delay);
-            delay += 18; // 점점 느려지게
-        }
-        randomResult.classList.remove('rolling');
-    }
-
-    randomResult.textContent = `오늘은 → ${winner.name}`;
-    // winner 애니메이션 재시작(연속 추첨 시에도 매번 재생되도록 reflow 트리거)
-    randomResult.classList.remove('winner');
-    void randomResult.offsetWidth;
-    randomResult.classList.add('winner');
-
-    if (!reduceMotion) {
-        burstStars(randomResult);
-        randomBtn.classList.add('fired');
-        randomBtn.addEventListener('animationend', () => randomBtn.classList.remove('fired'), { once: true });
-    }
+    await playSlot(pool.map((m) => m.name), winner.name);
 
     const ctrl = createLocationControl(winner.name);
     if (ctrl) randomResult.insertAdjacentElement('afterend', ctrl);
