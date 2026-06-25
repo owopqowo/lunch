@@ -59,6 +59,7 @@ const ICONS = {
     search: icon('<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>'),
     close: icon('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>', 18),
     external: icon('<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h6"/>', 14),
+    more: icon('<circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="18" r="1.5" fill="currentColor" stroke="none"/>', 20),
 };
 
 function applyTheme(theme) {
@@ -108,7 +109,6 @@ function renderSkeleton(count = 6) {
         <div class="sk sk-line sk-desc"></div>
       </div>
       <div class="actions">
-        <span class="sk sk-btn"></span>
         <span class="sk sk-btn"></span>
         <span class="sk sk-btn"></span>
       </div>${locSk}
@@ -263,8 +263,13 @@ function renderView(li, m) {
     </div>
     <div class="actions">
       <button class="vote-btn">${ICONS.thumb}<span class="vote-count"></span></button>
-      <button class="edit-req-btn" type="button">수정 요청</button>
-      <button class="del-req-btn" type="button">삭제 요청</button>
+      <div class="more-wrap">
+        <button class="more-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-label="더보기">${ICONS.more}</button>
+        <div class="more-menu" role="menu" hidden>
+          <button class="edit-req-btn" type="button" role="menuitem">수정</button>
+          <button class="del-req-btn" type="button" role="menuitem">삭제</button>
+        </div>
+      </div>
     </div>
   `;
     li.querySelector('.name').textContent = m.name;
@@ -273,8 +278,36 @@ function renderView(li, m) {
     voteBtn.querySelector('.vote-count').textContent = m.votes;
     voteBtn.setAttribute('aria-label', `투표, 현재 ${m.votes}표`);
     voteBtn.onclick = (e) => vote(m.id, e.currentTarget);
-    li.querySelector('.edit-req-btn').onclick = () => renderEditRequest(li, m);
-    li.querySelector('.del-req-btn').onclick = () => renderDeleteRequest(li, m);
+
+    // 수정/삭제는 드문 액션이므로 '더보기' 드롭다운으로 접어 둔다(투표가 주 행동).
+    const moreBtn = li.querySelector('.more-btn');
+    const moreMenu = li.querySelector('.more-menu');
+    const closeMenu = () => {
+        if (moreMenu.hidden) return;
+        moreMenu.hidden = true;
+        moreBtn.setAttribute('aria-expanded', 'false');
+        document.removeEventListener('click', onOutside, true);
+        document.removeEventListener('keydown', onEsc);
+    };
+    const onOutside = (e) => {
+        if (!li.querySelector('.more-wrap').contains(e.target)) closeMenu();
+    };
+    const onEsc = (e) => {
+        if (e.key === 'Escape') { closeMenu(); moreBtn.focus(); }
+    };
+    moreBtn.onclick = () => {
+        if (moreMenu.hidden) {
+            moreMenu.hidden = false;
+            moreBtn.setAttribute('aria-expanded', 'true');
+            // 캡처 단계로 등록해 이번 클릭이 바로 바깥 클릭으로 닫지 않게 한다.
+            document.addEventListener('click', onOutside, true);
+            document.addEventListener('keydown', onEsc);
+        } else {
+            closeMenu();
+        }
+    };
+    li.querySelector('.edit-req-btn').onclick = () => { closeMenu(); renderEditRequest(li, m); };
+    li.querySelector('.del-req-btn').onclick = () => { closeMenu(); renderDeleteRequest(li, m); };
     const ctrl = createLocationControl(m.name);
     if (ctrl) li.appendChild(ctrl);
 }
@@ -339,7 +372,7 @@ function renderDeleteRequest(li, m) {
       <input class="req-reason" type="text" placeholder="삭제 사유 (선택)" />
     </div>
     <div class="actions">
-      <button class="confirm-del-btn" type="button">삭제 요청</button>
+      <button class="confirm-del-btn" type="button">요청 보내기</button>
       <button class="cancel-btn" type="button">취소</button>
     </div>
   `;
