@@ -468,7 +468,25 @@ function ensureMapModal() {
 }
 
 function onMapModalKeydown(e) {
-    if (e.key === 'Escape') closeMapModal();
+    if (e.key === 'Escape') {
+        closeMapModal();
+        return;
+    }
+    if (e.key !== 'Tab' || !mapModalEls) return;
+    // 포커스 트랩: Tab 이동이 모달 밖으로 새지 않도록 가둔다.
+    const focusable = mapModalEls.overlay.querySelectorAll(
+        'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    );
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+    }
 }
 
 // 모달을 열고 콘텐츠를 채울 본문 요소를 반환한다.

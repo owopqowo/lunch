@@ -24,6 +24,8 @@
   --on-solid: #fff;
   --toast-bg: #1f2937;
   --toast-fg: #fff;
+  /* 당첨 텍스트: 흰 배경에서 brand(#f59e0b)는 대비 부족 → 진한 앰버로 */
+  --result-win: #b45309;
 }
 
 :root[data-theme="dark"] {
@@ -51,6 +53,8 @@
   --on-solid: #1f2937;
   --toast-bg: #e5e7eb;
   --toast-fg: #1f2937;
+  /* 어두운 배경에서는 밝은 앰버가 잘 보인다 */
+  --result-win: #fbbf24;
 }
 :root[data-theme="dark"] .sk::after {
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
@@ -100,9 +104,9 @@ h1 { text-align: center; }
 .recommend-btn:active:not(:disabled) { transform: translateY(1px); }
 .recommend-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 #random-result { font-size: 1.2rem; font-weight: 600; min-height: 1.5em; transition: color 0.15s; }
-#random-result.rolling { color: #9ca3af; }
+#random-result.rolling { color: var(--muted); }
 #random-result.winner {
-  color: var(--brand); font-size: 1.6rem;
+  color: var(--result-win); font-size: 1.6rem;
   animation: pop 0.55s cubic-bezier(0.18, 0.89, 0.32, 1.6);
   text-shadow: 0 0 0 rgba(245, 158, 11, 0);
 }
@@ -136,13 +140,13 @@ h1 { text-align: center; }
 }
 #add-form { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
 #add-form input {
-  flex: 1; padding: 8px; border: 1px solid var(--line-strong); border-radius: 6px;
+  flex: 1; height: 40px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 6px;
   background: var(--card); color: var(--ink);
   transition: border-color 0.15s;
 }
 #add-form input:focus { border-color: var(--brand); outline: none; }
 #add-form button {
-  padding: 8px 16px; border: none; border-radius: 6px; font-weight: 600;
+  height: 40px; padding: 0 18px; border: none; border-radius: 6px; font-weight: 600;
   background: var(--solid); color: var(--on-solid); cursor: pointer;
   transition: background 0.15s;
 }
@@ -325,8 +329,9 @@ h1 { text-align: center; }
 
   /* 입력 폼: 세로 스택 + 풀폭 (iOS 확대 방지 위해 16px) */
   #add-form { flex-direction: column; gap: 8px; }
-  #add-form input { font-size: 16px; }
-  #add-form button { width: 100%; padding: 12px; }
+  /* 세로 스택에서는 flex:1이 input을 쪼그라뜨리므로 풀폭 고정 높이로 */
+  #add-form input { flex: 0 0 auto; width: 100%; font-size: 16px; height: 44px; }
+  #add-form button { width: 100%; height: 44px; padding: 0; }
   #search { font-size: 16px; } /* iOS 확대 방지 */
   #category-filter { font-size: 16px; } /* iOS 확대 방지 */
 
