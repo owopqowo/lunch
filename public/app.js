@@ -263,8 +263,8 @@ function renderView(li, m) {
     </div>
     <div class="actions">
       <button class="vote-btn">${ICONS.thumb}<span class="vote-count"></span></button>
-      <button class="edit-btn">수정</button>
-      <button class="del-btn">삭제</button>
+      <button class="edit-req-btn" type="button">수정 요청</button>
+      <button class="del-req-btn" type="button">삭제 요청</button>
     </div>
   `;
     li.querySelector('.name').textContent = m.name;
@@ -273,35 +273,56 @@ function renderView(li, m) {
     voteBtn.querySelector('.vote-count').textContent = m.votes;
     voteBtn.setAttribute('aria-label', `투표, 현재 ${m.votes}표`);
     voteBtn.onclick = (e) => vote(m.id, e.currentTarget);
-    li.querySelector('.edit-btn').onclick = () => renderEdit(li, m);
-    li.querySelector('.del-btn').onclick = () => renderDeleteConfirm(li, m);
+    li.querySelector('.edit-req-btn').onclick = () => renderEditRequest(li, m);
+    li.querySelector('.del-req-btn').onclick = () => renderDeleteRequest(li, m);
     const ctrl = createLocationControl(m.name);
     if (ctrl) li.appendChild(ctrl);
 }
 
-function renderEdit(li, m) {
+// 수정 요청 폼: 바꿀 이름/메뉴를 입력받아 requests로 보낸다(실제 메뉴는 안 바뀜).
+function renderEditRequest(li, m) {
     li.className = 'menu-item editing';
     li.innerHTML = `
     <div class="info edit-fields">
-      <input class="edit-name" type="text" placeholder="식당 이름" />
-      <input class="edit-desc" type="text" placeholder="메뉴 (예: 갈비덮밥)" />
+      <input class="req-name" type="text" placeholder="식당 이름" />
+      <input class="req-desc" type="text" placeholder="메뉴 (예: 갈비덮밥)" />
     </div>
     <div class="actions">
-      <button class="save-btn">저장</button>
-      <button class="cancel-btn">취소</button>
+      <button class="save-btn" type="button">요청 보내기</button>
+      <button class="cancel-btn" type="button">취소</button>
     </div>
   `;
-    const nameEl = li.querySelector('.edit-name');
-    const descEl = li.querySelector('.edit-desc');
+    const nameEl = li.querySelector('.req-name');
+    const descEl = li.querySelector('.req-desc');
     nameEl.value = m.name;
     descEl.value = m.description || '';
-    const save = () => saveEdit(li, m, nameEl.value, descEl.value);
     const cancel = () => renderView(li, m);
-    li.querySelector('.save-btn').onclick = save;
+    const send = async () => {
+        const name = nameEl.value.trim();
+        const description = descEl.value.trim();
+        if (!name && !description) {
+            showToast('바꿀 내용을 입력하세요', 'error');
+            return;
+        }
+        // 둘 다 그대로면 보낼 필요 없음
+        if (name === m.name && description === (m.description || '')) {
+            showToast('바뀐 내용이 없어요', 'error');
+            return;
+        }
+        const saveBtn = li.querySelector('.save-btn');
+        saveBtn.disabled = true;
+        const ok = await submitRequest(
+            { type: 'edit', menu_id: m.id, name, description },
+            { successMsg: '수정 요청을 보냈어요. 검토 후 반영돼요.' }
+        );
+        if (ok) renderView(li, m);
+        else saveBtn.disabled = false;
+    };
+    li.querySelector('.save-btn').onclick = send;
     li.querySelector('.cancel-btn').onclick = cancel;
     for (const el of [nameEl, descEl]) {
         el.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') save();
+            if (e.key === 'Enter') send();
             else if (e.key === 'Escape') cancel();
         });
     }
@@ -309,46 +330,39 @@ function renderEdit(li, m) {
     nameEl.select();
 }
 
-async function saveEdit(li, m, name, description) {
-    name = name.trim();
-    if (!name) {
-        showToast('식당 이름을 입력하세요', 'error');
-        return;
-    }
-    const saveBtn = li.querySelector('.save-btn');
-    saveBtn.disabled = true;
-    try {
-        const res = await fetch(`/api/menus/${m.id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, description: description.trim() }),
-        });
-        if (!res.ok) {
-            // 409면 다른 식당과 이름이 겹침 — 편집 상태를 유지한다.
-            showToast(res.status === 409 ? '이미 있는 식당 이름이에요' : '수정에 실패했어요', 'error');
-            saveBtn.disabled = false;
-            return;
-        }
-        showToast('수정했어요', 'success');
-        loadMenus();
-    } catch (err) {
-        showToast('수정에 실패했어요', 'error');
-        saveBtn.disabled = false;
-    }
-}
-
-function renderDeleteConfirm(li, m) {
+// 삭제 요청 확인: 사유(선택)를 받아 requests로 보낸다(실제 메뉴는 안 지워짐).
+function renderDeleteRequest(li, m) {
     li.className = 'menu-item confirming';
     li.innerHTML = `
-    <span class="confirm-text">삭제할까요?</span>
+    <div class="info edit-fields">
+      <span class="confirm-text"></span>
+      <input class="req-reason" type="text" placeholder="삭제 사유 (선택)" />
+    </div>
     <div class="actions">
-      <button class="confirm-del-btn">삭제</button>
-      <button class="cancel-btn">취소</button>
+      <button class="confirm-del-btn" type="button">삭제 요청</button>
+      <button class="cancel-btn" type="button">취소</button>
     </div>
   `;
-    li.querySelector('.confirm-text').textContent = `'${m.name}' 삭제할까요?`;
-    li.querySelector('.confirm-del-btn').onclick = (e) => removeMenu(li, m, e.currentTarget);
-    li.querySelector('.cancel-btn').onclick = () => renderView(li, m);
+    li.querySelector('.confirm-text').textContent = `'${m.name}' 삭제를 요청할까요?`;
+    const reasonEl = li.querySelector('.req-reason');
+    const cancel = () => renderView(li, m);
+    const send = async () => {
+        const btn = li.querySelector('.confirm-del-btn');
+        btn.disabled = true;
+        const ok = await submitRequest(
+            { type: 'delete', menu_id: m.id, reason: reasonEl.value.trim() },
+            { successMsg: '삭제 요청을 보냈어요. 검토 후 반영돼요.' }
+        );
+        if (ok) renderView(li, m);
+        else btn.disabled = false;
+    };
+    li.querySelector('.confirm-del-btn').onclick = send;
+    li.querySelector('.cancel-btn').onclick = cancel;
+    reasonEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') send();
+        else if (e.key === 'Escape') cancel();
+    });
+    reasonEl.focus();
 }
 
 // 식당명으로 카카오를 조회해 카테고리를 알아내고, 해당 메뉴에 PATCH한다.
@@ -373,27 +387,40 @@ async function fillCategory(menu) {
   }
 }
 
+// 추가·수정·삭제는 직접 반영하지 않고 요청으로 보낸다(관리자 검토 후 반영).
+// body는 { type, menu_id?, name?, description?, reason? }.
+// 성공하면 true, 실패하면 false를 반환한다.
+async function submitRequest(body, { successMsg } = {}) {
+    try {
+        const res = await fetch('/api/requests', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+            // 409면 이미 등록된 식당(추가 요청 중복) — 다른 실패와 구분해 안내한다.
+            showToast(res.status === 409 ? '이미 등록된 식당이에요' : '요청에 실패했어요', 'error');
+            return false;
+        }
+        showToast(successMsg || '요청을 보냈어요', 'success');
+        return true;
+    } catch (err) {
+        showToast('요청에 실패했어요', 'error');
+        return false;
+    }
+}
+
 form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = nameInput.value.trim();
     if (!name) return;
-    const res = await fetch('/api/menus', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, description: descInput.value.trim() }),
-    });
-    if (!res.ok) {
-        // 409면 이미 등록된 식당 — 폼은 그대로 둬서 바로 고칠 수 있게 한다.
-        showToast(res.status === 409 ? '이미 등록된 식당이에요' : '추가에 실패했어요', 'error');
-        return;
+    const ok = await submitRequest(
+        { type: 'add', name, description: descInput.value.trim() },
+        { successMsg: '추가 요청을 보냈어요. 검토 후 반영돼요.' }
+    );
+    if (ok) {
+        form.reset();
     }
-    const created = await res.json();
-    form.reset();
-    searchInput.value = ''; // 추가한 식당이 검색 필터에 가려지지 않도록 초기화
-    showToast('추가했어요', 'success');
-    loadMenus(); // 즉시 목록 반영(카테고리는 아직 null일 수 있음)
-    // 백그라운드로 카테고리 채운 뒤 한 번 더 갱신
-    fillCategory(created).then(() => loadMenus());
 });
 
 async function vote(id, btn) {
@@ -413,23 +440,6 @@ async function vote(id, btn) {
         showToast('투표에 실패했어요', 'error');
         btn.disabled = false;
         btn.classList.remove('loading');
-    }
-}
-
-async function removeMenu(li, m, btn) {
-    btn.disabled = true;
-    try {
-        const res = await fetch(`/api/menus/${m.id}`, { method: 'DELETE' });
-        if (!res.ok) {
-            showToast('삭제에 실패했어요', 'error');
-            btn.disabled = false;
-            return;
-        }
-        showToast('삭제했어요', 'success');
-        loadMenus();
-    } catch (err) {
-        showToast('삭제에 실패했어요', 'error');
-        btn.disabled = false;
     }
 }
 

@@ -20,4 +20,56 @@ export async function initSchema(client) {
   if (!hasCategory) {
     await client.execute('ALTER TABLE menus ADD COLUMN category TEXT');
   }
+
+  // 추가·수정·삭제는 직접 반영하지 않고 요청으로 쌓아 관리자가 검토한다.
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS requests (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      type        TEXT    NOT NULL,                       -- 'add' | 'edit' | 'delete'
+      menu_id     INTEGER,                                -- edit/delete 대상 메뉴 (add는 null)
+      name        TEXT,                                   -- add/edit: 제안하는 식당 이름
+      description TEXT,                                   -- add/edit: 제안하는 메뉴 설명
+      reason      TEXT,                                   -- 요청 사유 (선택)
+      status      TEXT    NOT NULL DEFAULT 'pending',     -- 'pending' | 'approved' | 'rejected'
+      created_at  TEXT    DEFAULT (datetime('now'))
+    )
+  `);
+}
+
+// 식당명을 정규화한다(공백 제거 + 소문자). 중복 판정의 기준.
+export function normalizeName(name) {
+  return (name ?? '').replace(/\s+/g, '').toLowerCase();
+}
+
+// 같은 이름(정규화 기준)의 식당이 이미 있는지 확인한다.
+// excludeId가 주어지면 그 id는 제외(자기 자신과의 충돌 방지).
+export async function isDuplicateName(client, name, excludeId = null) {
+  const sql = excludeId == null
+    ? "SELECT id FROM menus WHERE lower(replace(name, ' ', '')) = lower(replace(?, ' ', ''))"
+    : "SELECT id FROM menus WHERE lower(replace(name, ' ', '')) = lower(replace(?, ' ', '')) AND id != ?";
+  const args = excludeId == null ? [name] : [name, excludeId];
+  const dup = await client.execute({ sql, args });
+  return dup.rows.length > 0;
+}
+
+// menus에 식당을 실제로 추가한다. menus에 INSERT하는 유일한 경로.
+// 라우트 핸들러(외부 호출)와 분리해, 승인 처리 같은 신뢰된 코드에서만 호출한다.
+// 결과는 { ok, status, row?, error? } 형태로 돌려준다.
+export async function createMenu(client, { name, description, category } = {}) {
+  const trimmed = typeof name === 'string' ? name.trim() : '';
+  if (!trimmed) {
+    return { ok: false, status: 400, error: 'name is required' };
+  }
+  if (await isDuplicateName(client, trimmed)) {
+    return { ok: false, status: 409, error: 'duplicate' };
+  }
+  const result = await client.execute({
+    sql: 'INSERT INTO menus (name, description, category) VALUES (?, ?, ?) RETURNING *',
+    args: [
+      trimmed,
+      (typeof description === 'string' && description.trim()) ? description.trim() : null,
+      (typeof category === 'string' && category.trim()) ? category.trim() : null,
+    ],
+  });
+  return { ok: true, status: 201, row: result.rows[0] };
 }
