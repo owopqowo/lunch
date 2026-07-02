@@ -439,12 +439,18 @@ h1 { text-align: center; }
 .review-wrap.open .review-toggle svg:last-child { transform: rotate(180deg); }
 
 .review-panel { margin-top: 8px; }
-.review-list { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+/* 코멘트가 많아도 카드가 무한정 늘어나지 않게 목록만 내부 스크롤(약 5개분) */
+.review-list {
+  list-style: none; margin: 0 0 8px; padding: 0;
+  max-height: 220px; overflow-y: auto; overscroll-behavior: contain;
+}
+/* 코멘트는 면(배경) 없이 구분선으로 나눈다 — 토글 버튼(면)과 확실히 구분 */
 .review-item {
   font-size: 0.9rem; color: var(--ink);
-  background: var(--surface); padding: 8px 10px; border-radius: 6px;
+  padding: 10px 2px; border-bottom: 1px solid var(--line);
   overflow-wrap: anywhere;
 }
+.review-item:last-child { border-bottom: none; }
 .review-empty, .review-loading, .review-error {
   font-size: 0.85rem; color: var(--muted); padding: 4px 2px; margin: 0 0 8px;
 }
