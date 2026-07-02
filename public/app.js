@@ -266,6 +266,7 @@ function renderView(li, m) {
     </div>
     <div class="actions">
       <button class="vote-btn">${ICONS.thumb}<span class="vote-count"></span></button>
+      <span class="loc-slot"></span>
       <div class="more-wrap">
         <button class="more-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-label="더보기">${ICONS.more}</button>
         <div class="more-menu" role="menu" hidden>
@@ -311,8 +312,10 @@ function renderView(li, m) {
     };
     li.querySelector('.edit-req-btn').onclick = () => { closeMenu(); renderEditRequest(li, m); };
     li.querySelector('.del-req-btn').onclick = () => { closeMenu(); renderDeleteRequest(li, m); };
-    const ctrl = createLocationControl(m.name);
-    if (ctrl) li.appendChild(ctrl);
+    // 위치 보기는 따봉과 더보기 사이(아이콘 버튼)로 넣는다.
+    const locBtn = createLocationIconButton(m.name);
+    if (locBtn) li.querySelector('.loc-slot').replaceWith(locBtn);
+    else li.querySelector('.loc-slot').remove();
     li.appendChild(createReviewSection(m));
 }
 
@@ -680,7 +683,37 @@ function closeMapModal() {
     mapModalOpener = null;
 }
 
-// 식당 이름으로 '위치 보기' 버튼을 만든다. 클릭 시 지도를 모달로 띄운다.
+// 위치 버튼 클릭 시 지도 모달을 여는 공유 동작(카드/추천 결과 공용).
+async function openLocationFor(name, btn) {
+    btn.disabled = true;
+    const ok = await loadKakao();
+    if (!ok) {
+        showToast('지도를 불러오지 못했어요', 'error');
+        btn.disabled = false;
+        return;
+    }
+    const place = await findPlace(name);
+    const body = openMapModal(name, btn);
+    if (!place) {
+        const msg = document.createElement('p');
+        msg.className = 'map-empty';
+        msg.textContent = '위치를 찾지 못했어요.';
+        const a = document.createElement('a');
+        a.href = kakaoSearchUrl(name);
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.className = 'map-link';
+        a.setAttribute('aria-label', '카카오맵에서 검색 (새 탭)');
+        a.innerHTML = `<span>카카오맵에서 검색</span>${ICONS.external}`;
+        body.appendChild(msg);
+        body.appendChild(a);
+    } else {
+        showMap(body, place);
+    }
+    btn.disabled = false;
+}
+
+// 추천 결과 아래에 붙는 '위치 보기' 버튼(텍스트 포함, 중앙 정렬).
 // 키가 없으면 null을 반환(버튼 미생성).
 function createLocationControl(name) {
     if (!isLocationEnabled()) return null;
@@ -691,38 +724,23 @@ function createLocationControl(name) {
     btn.type = 'button';
     btn.className = 'loc-btn';
     btn.innerHTML = `${ICONS.pin}<span>위치 보기</span>`;
-
-    btn.addEventListener('click', async () => {
-        btn.disabled = true;
-        const ok = await loadKakao();
-        if (!ok) {
-            showToast('지도를 불러오지 못했어요', 'error');
-            btn.disabled = false;
-            return;
-        }
-        const place = await findPlace(name);
-        const body = openMapModal(name, btn);
-        if (!place) {
-            const msg = document.createElement('p');
-            msg.className = 'map-empty';
-            msg.textContent = '위치를 찾지 못했어요.';
-            const a = document.createElement('a');
-            a.href = kakaoSearchUrl(name);
-            a.target = '_blank';
-            a.rel = 'noopener';
-            a.className = 'map-link';
-            a.setAttribute('aria-label', '카카오맵에서 검색 (새 탭)');
-            a.innerHTML = `<span>카카오맵에서 검색</span>${ICONS.external}`;
-            body.appendChild(msg);
-            body.appendChild(a);
-        } else {
-            showMap(body, place);
-        }
-        btn.disabled = false;
-    });
+    btn.addEventListener('click', () => openLocationFor(name, btn));
 
     wrap.appendChild(btn);
     return wrap;
+}
+
+// 카드 액션줄용 아이콘 전용 위치 버튼(따봉·더보기 사이).
+// 키가 없으면 null을 반환(버튼 미생성).
+function createLocationIconButton(name) {
+    if (!isLocationEnabled()) return null;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'loc-icon-btn';
+    btn.setAttribute('aria-label', `${name} 위치 보기`);
+    btn.innerHTML = ICONS.pin;
+    btn.addEventListener('click', () => openLocationFor(name, btn));
+    return btn;
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

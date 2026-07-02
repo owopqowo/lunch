@@ -237,6 +237,14 @@ h1 { text-align: center; }
 }
 .more-btn:hover { background: var(--surface); color: var(--ink); }
 .more-btn[aria-expanded="true"] { background: var(--surface); color: var(--ink); }
+
+/* 위치 보기(아이콘): 따봉과 더보기 사이. more-btn과 같은 정사각 ghost 형태 */
+.menu-item .loc-icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; padding: 0; flex: 0 0 auto;
+  background: transparent; color: var(--muted);
+}
+.loc-icon-btn:hover:not(:disabled) { background: var(--surface); color: var(--ink); }
 /* 떠 있는 드롭다운: 더보기 버튼 오른쪽 아래에 정렬 */
 .more-menu {
   position: absolute; top: calc(100% + 6px); right: 0; z-index: 30;
