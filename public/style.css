@@ -427,14 +427,15 @@ h1 { text-align: center; }
 /* 한줄평 */
 .review-wrap { flex: 1 1 100%; margin-top: 6px; }
 .review-toggle {
-  display: inline-flex; align-items: center; gap: 6px;
+  display: flex; align-items: center; gap: 6px; width: 100%;
   min-height: 44px; padding: 6px 10px; border-radius: 6px;
   background: transparent; border: none; color: var(--muted);
   font-size: 0.85rem; font-weight: 600; cursor: pointer;
   transition: color 0.15s, background 0.15s;
 }
 .review-toggle:hover { color: var(--ink); background: var(--surface-hover); }
-.review-toggle svg:last-child { transition: transform 0.2s; }
+/* 펼침 화살표를 오른쪽 끝으로 밀어 '펼쳐보기'임을 분명히 한다 */
+.review-toggle svg:last-child { margin-left: auto; transition: transform 0.2s; }
 .review-wrap.open .review-toggle svg:last-child { transform: rotate(180deg); }
 
 .review-panel { margin-top: 8px; }
