@@ -420,7 +420,7 @@ h1 { text-align: center; }
 .review-wrap { flex: 1 1 100%; margin-top: 6px; }
 .review-toggle {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 10px; border-radius: 6px;
+  min-height: 44px; padding: 6px 10px; border-radius: 6px;
   background: transparent; border: none; color: var(--muted);
   font-size: 0.85rem; font-weight: 600; cursor: pointer;
   transition: color 0.15s, background 0.15s;
@@ -439,19 +439,24 @@ h1 { text-align: center; }
 .review-empty, .review-loading, .review-error {
   font-size: 0.85rem; color: var(--muted); padding: 4px 2px; margin: 0 0 8px;
 }
-.review-form { display: flex; gap: 6px; }
+/* add-form과 같은 토큰/치수를 재사용해 톤과 접근성(대비·터치 타깃)을 맞춘다 */
+.review-form { display: flex; gap: 8px; }
 .review-input {
   flex: 1; min-width: 0;
-  padding: 8px 10px; border-radius: 6px;
+  height: 44px; padding: 0 12px; border-radius: 6px;
   border: 1px solid var(--line-strong); background: var(--card); color: var(--ink);
-  font-size: 0.9rem;
+  font-size: 16px; /* 모바일 자동 확대 방지 */
+  transition: border-color 0.15s;
 }
+.review-input:focus { border-color: var(--brand); outline: none; }
 .review-submit {
-  padding: 8px 14px; border-radius: 6px;
-  border: 1px solid transparent; background: var(--brand); color: #fff;
-  font-size: 0.9rem; font-weight: 600; cursor: pointer;
-  transition: opacity 0.15s;
+  flex: 0 0 auto;
+  height: 44px; padding: 0 18px; border-radius: 6px;
+  border: none; background: var(--solid); color: var(--on-solid);
+  font-weight: 600; cursor: pointer;
+  transition: background 0.15s;
 }
+.review-submit:hover:not(:disabled) { background: var(--solid-hover); }
 .review-submit:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* 지도 모달 */
