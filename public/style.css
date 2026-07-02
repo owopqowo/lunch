@@ -470,7 +470,7 @@ h1 { text-align: center; }
 .review-input:focus { border-color: var(--brand); outline: none; }
 .review-submit {
   flex: 0 0 auto;
-  height: 44px; padding: 0 18px; border-radius: 6px;
+  height: 44px; min-width: 88px; padding: 0 18px; border-radius: 6px;
   border: none; background: var(--solid); color: var(--on-solid);
   font-weight: 600; cursor: pointer;
   transition: background 0.15s;
