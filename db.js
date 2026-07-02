@@ -34,6 +34,17 @@ export async function initSchema(client) {
       created_at  TEXT    DEFAULT (datetime('now'))
     )
   `);
+
+  // 한줄평은 requests와 달리 즉시 반영된다(덧붙이는 콘텐츠라 어뷰징 표면이 작다).
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS reviews (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      menu_id    INTEGER NOT NULL,                        -- 대상 식당 (menus.id)
+      body       TEXT    NOT NULL,                        -- 한줄평 본문 (텍스트, ≤100자)
+      device_id  TEXT,                                    -- 익명 식별자 (도배 최소 방지용)
+      created_at TEXT    DEFAULT (datetime('now'))
+    )
+  `);
 }
 
 // 식당명을 정규화한다(공백 제거 + 소문자). 중복 판정의 기준.

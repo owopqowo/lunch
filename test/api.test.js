@@ -311,3 +311,87 @@ test('POST /api/requests(delete)는 없는 menu_id면 404를 반환한다', asyn
     .send({ type: 'delete', menu_id: 9999 });
   assert.equal(res.status, 404);
 });
+
+// --- 한줄평(reviews) 기능 ---
+
+test('GET /api/menus/:id/reviews는 처음엔 빈 배열을 반환한다', async () => {
+  const { app, client } = await freshApp();
+  const m = await seed(client, '리뷰집');
+  const res = await request(app).get(`/api/menus/${m.id}/reviews`);
+  assert.equal(res.status, 200);
+  assert.deepEqual(res.body, []);
+});
+
+test('GET /api/menus/:id/reviews는 없는 메뉴여도 빈 배열을 반환한다', async () => {
+  const { app } = await freshApp();
+  const res = await request(app).get('/api/menus/9999/reviews');
+  assert.equal(res.status, 200);
+  assert.deepEqual(res.body, []);
+});
+
+test('POST /api/menus/:id/reviews는 한줄평을 즉시 저장한다', async () => {
+  const { app, client } = await freshApp();
+  const m = await seed(client, '맛집');
+  const res = await request(app)
+    .post(`/api/menus/${m.id}/reviews`)
+    .send({ body: '진짜 맛있어요', device_id: 'dev-1' });
+  assert.equal(res.status, 201);
+  assert.equal(res.body.body, '진짜 맛있어요');
+  assert.equal(res.body.menu_id, m.id);
+  // 바로 조회된다
+  const list = await request(app).get(`/api/menus/${m.id}/reviews`);
+  assert.equal(list.body.length, 1);
+  assert.equal(list.body[0].body, '진짜 맛있어요');
+});
+
+test('POST /api/menus/:id/reviews는 body를 trim해서 저장한다', async () => {
+  const { app, client } = await freshApp();
+  const m = await seed(client, '공백집');
+  const res = await request(app)
+    .post(`/api/menus/${m.id}/reviews`)
+    .send({ body: '  띄어쓰기  ' });
+  assert.equal(res.status, 201);
+  assert.equal(res.body.body, '띄어쓰기');
+});
+
+test('POST /api/menus/:id/reviews는 빈 body면 400을 반환한다', async () => {
+  const { app, client } = await freshApp();
+  const m = await seed(client, '빈집');
+  const res = await request(app).post(`/api/menus/${m.id}/reviews`).send({ body: '   ' });
+  assert.equal(res.status, 400);
+});
+
+test('POST /api/menus/:id/reviews는 100자 초과면 400을 반환한다', async () => {
+  const { app, client } = await freshApp();
+  const m = await seed(client, '장문집');
+  const res = await request(app)
+    .post(`/api/menus/${m.id}/reviews`)
+    .send({ body: '가'.repeat(101) });
+  assert.equal(res.status, 400);
+});
+
+test('POST /api/menus/:id/reviews는 없는 메뉴면 404를 반환한다', async () => {
+  const { app } = await freshApp();
+  const res = await request(app).post('/api/menus/9999/reviews').send({ body: '한줄평' });
+  assert.equal(res.status, 404);
+});
+
+test('GET /api/menus/:id/reviews는 최신순으로 반환한다', async () => {
+  const { app, client } = await freshApp();
+  const m = await seed(client, '순서집');
+  await request(app).post(`/api/menus/${m.id}/reviews`).send({ body: '첫번째' });
+  await request(app).post(`/api/menus/${m.id}/reviews`).send({ body: '두번째' });
+  const list = await request(app).get(`/api/menus/${m.id}/reviews`);
+  assert.equal(list.body.length, 2);
+  assert.equal(list.body[0].body, '두번째'); // 최신이 맨 위
+  assert.equal(list.body[1].body, '첫번째');
+});
+
+test('GET /api/menus/:id/reviews는 다른 식당의 한줄평은 섞지 않는다', async () => {
+  const { app, client } = await freshApp();
+  const a = await seed(client, 'A집');
+  const b = await seed(client, 'B집');
+  await request(app).post(`/api/menus/${a.id}/reviews`).send({ body: 'A리뷰' });
+  const listB = await request(app).get(`/api/menus/${b.id}/reviews`);
+  assert.deepEqual(listB.body, []);
+});

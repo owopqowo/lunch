@@ -9,6 +9,7 @@ import {
 } from './map.js';
 import { filterMenus } from './search.js';
 import { extractCategories, matchesCategory, mapCategory, eligibleCategories } from './category.js';
+import { validateReviewBody, MAX_REVIEW_LENGTH, getDeviceId } from './review.js';
 
 const list = document.getElementById('menu-list');
 const form = document.getElementById('add-form');
@@ -60,6 +61,8 @@ const ICONS = {
     close: icon('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>', 18),
     external: icon('<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h6"/>', 14),
     more: icon('<circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="18" r="1.5" fill="currentColor" stroke="none"/>', 20),
+    chat: icon('<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>', 16),
+    chevron: icon('<path d="m6 9 6 6 6-6"/>', 16),
 };
 
 function applyTheme(theme) {
@@ -310,6 +313,120 @@ function renderView(li, m) {
     li.querySelector('.del-req-btn').onclick = () => { closeMenu(); renderDeleteRequest(li, m); };
     const ctrl = createLocationControl(m.name);
     if (ctrl) li.appendChild(ctrl);
+    li.appendChild(createReviewSection(m));
+}
+
+// 한줄평 펼쳐보기 영역. 토글 버튼 + (펼쳤을 때) 목록/입력창.
+// 목록은 펼칠 때 지연 로딩한다.
+function createReviewSection(m) {
+    const wrap = document.createElement('div');
+    wrap.className = 'review-wrap';
+
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'review-toggle';
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.innerHTML = `${ICONS.chat}<span class="review-toggle-label">한줄평</span>${ICONS.chevron}`;
+
+    const panel = document.createElement('div');
+    panel.className = 'review-panel';
+    panel.hidden = true;
+
+    let loaded = false;
+    toggle.onclick = async () => {
+        const open = panel.hidden;
+        panel.hidden = !open;
+        toggle.setAttribute('aria-expanded', String(open));
+        wrap.classList.toggle('open', open);
+        if (open && !loaded) {
+            loaded = true;
+            await loadReviews(m.id, panel);
+        }
+    };
+
+    wrap.appendChild(toggle);
+    wrap.appendChild(panel);
+    return wrap;
+}
+
+// 한줄평 목록을 불러와 panel을 채운다(목록 + 입력 폼).
+async function loadReviews(menuId, panel) {
+    panel.innerHTML = '<p class="review-loading">불러오는 중…</p>';
+    let reviews;
+    try {
+        const res = await fetch(`/api/menus/${menuId}/reviews`);
+        if (!res.ok) throw new Error('load error');
+        reviews = await res.json();
+    } catch {
+        panel.innerHTML = '<p class="review-error">한줄평을 불러오지 못했어요</p>';
+        return;
+    }
+    panel.innerHTML = `
+      <ul class="review-list"></ul>
+      <form class="review-form">
+        <input class="review-input" type="text" maxlength="${MAX_REVIEW_LENGTH}"
+               placeholder="한줄평 남기기" aria-label="한줄평 입력" />
+        <button type="submit" class="review-submit">등록</button>
+      </form>
+    `;
+    const listEl = panel.querySelector('.review-list');
+    renderReviewList(listEl, reviews);
+
+    const formEl = panel.querySelector('.review-form');
+    const inputEl = panel.querySelector('.review-input');
+    formEl.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const check = validateReviewBody(inputEl.value);
+        if (!check.ok) {
+            showToast(check.error === 'too long' ? `${MAX_REVIEW_LENGTH}자까지 쓸 수 있어요` : '한줄평을 입력하세요', 'error');
+            return;
+        }
+        const submitBtn = formEl.querySelector('.review-submit');
+        submitBtn.disabled = true;
+        try {
+            const res = await fetch(`/api/menus/${menuId}/reviews`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ body: check.value, device_id: getDeviceId() }),
+            });
+            if (!res.ok) throw new Error('post error');
+            const created = await res.json();
+            // 방금 쓴 한줄평을 목록 맨 위에 즉시 추가
+            prependReview(listEl, created);
+            inputEl.value = '';
+        } catch {
+            showToast('한줄평 등록에 실패했어요', 'error');
+        } finally {
+            submitBtn.disabled = false;
+        }
+    });
+}
+
+// 한줄평 목록 렌더(비어 있으면 안내).
+function renderReviewList(listEl, reviews) {
+    listEl.innerHTML = '';
+    if (reviews.length === 0) {
+        const li = document.createElement('li');
+        li.className = 'review-empty';
+        li.textContent = '첫 한줄평을 남겨보세요';
+        listEl.appendChild(li);
+        return;
+    }
+    for (const r of reviews) listEl.appendChild(reviewItem(r));
+}
+
+// 새 한줄평을 목록 맨 위에 추가(안내 문구가 있으면 치운다).
+function prependReview(listEl, review) {
+    const empty = listEl.querySelector('.review-empty');
+    if (empty) empty.remove();
+    listEl.insertBefore(reviewItem(review), listEl.firstChild);
+}
+
+function reviewItem(r) {
+    const li = document.createElement('li');
+    li.className = 'review-item';
+    li.textContent = r.body; // textContent로 XSS 방지
+    return li;
 }
 
 // 수정 요청 폼: 바꿀 이름/메뉴를 입력받아 requests로 보낸다(실제 메뉴는 안 바뀜).

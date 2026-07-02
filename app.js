@@ -162,5 +162,50 @@ export function createApp(client) {
     }
   });
 
+  // 한줄평 조회. 없는 메뉴여도 빈 배열을 관대하게 반환한다.
+  app.get('/api/menus/:id/reviews', async (req, res) => {
+    try {
+      const result = await client.execute({
+        sql: 'SELECT * FROM reviews WHERE menu_id = ? ORDER BY created_at DESC, id DESC',
+        args: [req.params.id],
+      });
+      res.json(result.rows);
+    } catch (e) {
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
+  // 한줄평 작성 — 즉시 반영(관리자 검토 없음). 텍스트만, 100자 제한.
+  app.post('/api/menus/:id/reviews', async (req, res) => {
+    const { body, device_id } = req.body ?? {};
+    const trimmed = typeof body === 'string' ? body.trim() : '';
+    if (!trimmed) {
+      return res.status(400).json({ error: 'body is required' });
+    }
+    if (trimmed.length > 100) {
+      return res.status(400).json({ error: 'too long' });
+    }
+    try {
+      const target = await client.execute({
+        sql: 'SELECT id FROM menus WHERE id = ?',
+        args: [req.params.id],
+      });
+      if (target.rows.length === 0) {
+        return res.status(404).json({ error: 'menu not found' });
+      }
+      const result = await client.execute({
+        sql: 'INSERT INTO reviews (menu_id, body, device_id) VALUES (?, ?, ?) RETURNING *',
+        args: [
+          req.params.id,
+          trimmed,
+          (typeof device_id === 'string' && device_id.trim()) ? device_id.trim() : null,
+        ],
+      });
+      res.status(201).json(result.rows[0]);
+    } catch (e) {
+      res.status(500).json({ error: 'DB error' });
+    }
+  });
+
   return app;
 }
