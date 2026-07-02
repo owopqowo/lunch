@@ -18,6 +18,8 @@
   --danger-line: #fecaca;
   --bg: #f6f7f9;
   --card: #fff;
+  /* 코멘트 구분선: 카드 배경 위에서 은은하게 보이는 선(테마별 조정) */
+  --review-line: #e5e7eb;
   --vote-soft-hover: #bbf7d0;
   --solid: #1f2937;
   --solid-hover: #374151;
@@ -48,6 +50,8 @@
   --danger-line: #7f1d1d;
   --bg: #111418;
   --card: #1b1f24;
+  /* 카드(#1b1f24)에 가깝게 낮춰 선이 붕 뜨지 않게 한다 */
+  --review-line: #2a2f36;
   --solid: #e5e7eb;
   --solid-hover: #f3f4f6;
   --on-solid: #1f2937;
@@ -447,7 +451,7 @@ h1 { text-align: center; }
 /* 코멘트는 면(배경) 없이 구분선으로 나눈다 — 토글 버튼(면)과 확실히 구분 */
 .review-item {
   font-size: 0.9rem; color: var(--ink);
-  padding: 10px 2px; border-bottom: 1px solid var(--line);
+  padding: 10px 2px; border-bottom: 1px solid var(--review-line);
   overflow-wrap: anywhere;
 }
 .review-item:last-child { border-bottom: none; }
